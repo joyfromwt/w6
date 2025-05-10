@@ -7,7 +7,7 @@ export const Container = styled.div`
   flex-direction: column;
   align-items: center;
   background: #FFF;
-  color: #E3E3E3;
+  color: #A8A8A8;
 `;
 
 export const AboutSection = styled.section`
@@ -20,9 +20,9 @@ export const AboutSection = styled.section`
 export const Title = styled.h1`
   font-size: 2.5rem;
   font-weight: bold;
-  color: #E3E3E3;
+  color: #A8A8A8;
   margin-bottom: 2rem;
-  text-shadow: 0 0 10px rgba(227, 227, 227, 0.2);
+  text-shadow: 0 0 10px rgba(168, 168, 168, 0.2);
   letter-spacing: 2px;
   text-align: center;
 `;
@@ -32,7 +32,7 @@ export const ContentBox = styled.div`
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border: 1px solid #E3E3E3;
+  border: 1px solid #FFF;
   margin-bottom: 2rem;
 `;
 
@@ -42,7 +42,7 @@ export const Paragraph = styled.p`
   margin-bottom: 1.5rem;
   letter-spacing: 0.5px;
   opacity: 0.9;
-  color: #E3E3E3;
+  color: #A8A8A8;
 
   &:last-child {
     margin-bottom: 0;
@@ -61,20 +61,20 @@ export const SkillCard = styled.div`
   padding: 1rem;
   border-radius: 6px;
   text-align: center;
-  border: 1px solid #E3E3E3;
+  border: 1px solid #FFF;
   transition: all 0.3s ease;
-  color: #E3E3E3;
+  color: #A8A8A8;
 
   &:hover {
     transform: translateY(-3px);
-    border-color: #E3E3E3;
+    border-color: #FFF;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     background: #F8F8F8;
   }
 `;
 
 export const BackLink = styled.a`
-  color: #E3E3E3;
+  color: #A8A8A8;
   text-decoration: none;
   font-size: 1.1rem;
   transition: all 0.2s ease;
@@ -86,7 +86,7 @@ export const BackLink = styled.a`
   margin-top: 2rem;
 
   &:hover {
-    color: #E3E3E3;
+    color: #A8A8A8;
     background: #F8F8F8;
     transform: translateY(-2px);
   }
