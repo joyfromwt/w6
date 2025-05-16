@@ -13,10 +13,10 @@ export const ErikaMonoFont = createGlobalStyle`
 
 export const Container = styled.div`
   min-height: 100vh;
-  padding: 2rem;
+  padding: 2rem 2rem 2rem 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   background-color: #000;
   color: #A8A8A8;
   position: relative;
@@ -28,9 +28,10 @@ export const Container = styled.div`
 
 export const Header = styled.header`
   margin-bottom: 0rem;
-  text-align: center;
+  text-align: left;
   max-width: 1400px;
   width: 100%;
+  margin-left: 0px;
 `;
 
 export const Title = styled.h1`
@@ -38,14 +39,14 @@ export const Title = styled.h1`
   font-weight: 400;
   color: #A8A8A8;
   margin-bottom: 0.5rem;
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: 150px;
+  margin-right: 0;
   text-shadow: 0 0 0px rgba(168, 168, 168, 0.2);
   letter-spacing: 0px;
   -webkit-font-smoothing: antialiased;
   opacity: 1;
   max-width: 900px;
-  text-align: justify;
+  text-align: left;
   font-family: 'G2ErikaMono-Medium';
 `;
 
@@ -56,9 +57,10 @@ export const Subtitle = styled.p`
   margin: 0.5rem auto 0;
   letter-spacing: 0.5px;
   opacity: 0.8;
-  max-width: 900px;
+  max-width: 600px;
   width: 100%;
-  text-align: justify;
+  text-align: left;
+  margin-left: 150px;
 `;
 
 export const Section = styled.section`
@@ -108,14 +110,14 @@ export const ProjectCard = styled.div`
 export const MagnifyingGlassContainer = styled.div`
   position: fixed;
   width: 170px;
-  height: 170px;
+  height: 120px;
   border: 1px solid rgba(255,64,151,0);
   pointer-events: none;
   transform: translate(-50%, -50%);
   z-index: 9999;
   overflow: hidden;
-  background-color: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(5px);
+  background-color: rgba(0,0,0,0);
+  backdrop-filter: none;
   display: flex;
   justify-content: center;
   align-items: center;

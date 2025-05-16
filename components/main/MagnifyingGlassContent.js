@@ -3,7 +3,8 @@ import styled from 'styled-components';
 import Image from 'next/image';
 
 const MAGNIFY_FACTOR = 3.5;
-const CURSOR_SIZE = 170;
+const CURSOR_WIDTH = 170;
+const CURSOR_HEIGHT = 120;
 const OVERLAY_COLOR = '#ff4097';
 const MARK_SIZE = 4;
 
@@ -17,7 +18,7 @@ const InnerCardView = styled.div`
   width: ${props => props.cardWidth}px;
   height: ${props => props.cardHeight}px;
   position: relative;
-  background: transparent;
+  background: rgba(0,0,0,0);
   border-radius: 10px;
 
   img {
@@ -29,33 +30,34 @@ const InnerCardView = styled.div`
 `;
 
 function FocusOverlay() {
-  const SIZE = CURSOR_SIZE;
-  const CENTER = SIZE / 2;
+  const WIDTH = CURSOR_WIDTH;
+  const HEIGHT = CURSOR_HEIGHT;
+  const CENTER_X = WIDTH / 2;
+  const CENTER_Y = HEIGHT / 2;
   const GAP = 32;
-  const CORNER = 32;
-  const MARK_COLOR = '#ff4097';
+  const CORNER = 6;
   return (
     <svg
-      width={SIZE}
-      height={SIZE}
-      viewBox={`0 0 ${SIZE} ${SIZE}`}
+      width={WIDTH}
+      height={HEIGHT}
+      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       fill="none"
       style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}
     >
       {/* 중앙 원 */}
-      <circle cx={CENTER} cy={CENTER} r={GAP} stroke={OVERLAY_COLOR} strokeWidth={0.5} />
+      <circle cx={CENTER_X} cy={CENTER_Y} r={GAP} stroke={OVERLAY_COLOR} strokeWidth={0.5} />
       {/* 중앙 작은 사각형 */}
-      <rect x={CENTER-8} y={CENTER-8} width={12} height={12} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill="none" />
-      {/* 네 꼭짓점 10x10 사각형 (중심이 꼭짓점에 오도록, fill 적용) */}
-      <rect x={-5} y={-5} width={10} height={10} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
-      <rect x={SIZE-5} y={-5} width={10} height={10} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
-      <rect x={-5} y={SIZE-5} width={10} height={10} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
-      <rect x={SIZE-5} y={SIZE-5} width={10} height={10} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
-      {/* 네 변의 중간 10x10 사각형 (중복 없이 하나씩만) */}
-      <rect x={SIZE/2-5} y={-5} width={10} height={10} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
-      <rect x={SIZE-5} y={SIZE/2-5} width={10} height={10} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
-      <rect x={SIZE/2-5} y={SIZE-5} width={10} height={10} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
-      <rect x={-5} y={SIZE/2-5} width={10} height={10} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
+      <rect x={CENTER_X-6} y={CENTER_Y-6} width={12} height={12} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill="none" />
+      {/* 네 꼭짓점 6x6 사각형 */}
+      <rect x={0} y={0} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
+      <rect x={WIDTH-CORNER} y={0} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
+      <rect x={0} y={HEIGHT-CORNER} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
+      <rect x={WIDTH-CORNER} y={HEIGHT-CORNER} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
+      {/* 네 변의 중간 6x6 사각형 */}
+      <rect x={CENTER_X-CORNER/2} y={0} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
+      <rect x={CENTER_X-CORNER/2} y={HEIGHT-CORNER} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
+      <rect x={0} y={CENTER_Y-CORNER/2} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
+      <rect x={WIDTH-CORNER} y={CENTER_Y-CORNER/2} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
     </svg>
   );
 }
@@ -68,16 +70,16 @@ export default function MagnifyingGlassContent({ hoveredCardDetails }) {
   const { project, relativeX, relativeY, cardWidth, cardHeight } = hoveredCardDetails;
   const magnifiedFocusX = relativeX * MAGNIFY_FACTOR;
   const magnifiedFocusY = relativeY * MAGNIFY_FACTOR;
-  const contentLeft = (CURSOR_SIZE / 2) - magnifiedFocusX;
+  const contentLeft = (CURSOR_WIDTH / 2) - magnifiedFocusX;
   const fontSizePx = 0.6 * 16; // 0.6rem × 16px = 9.6px
   const textArtLines = hoveredCardDetails.linesLength || 40; // lines.length를 전달받는다고 가정, 없으면 40
   const textArtHeight = textArtLines * fontSizePx;
   const magnifiedImgHeight = cardHeight * MAGNIFY_FACTOR;
   const centerDiff = (textArtHeight / 2) - (magnifiedImgHeight / 2);
-  const contentTop = (CURSOR_SIZE / 2) - magnifiedFocusY + centerDiff + 600;
+  const contentTop = (CURSOR_HEIGHT / 2) - magnifiedFocusY + centerDiff + 600 - 100;
 
   return (
-    <div style={{ position: 'relative', width: CURSOR_SIZE, height: CURSOR_SIZE }}>
+    <div style={{ position: 'relative', width: CURSOR_WIDTH, height: CURSOR_HEIGHT }}>
       <ContentWrapper
         style={{
           width: `${cardWidth * MAGNIFY_FACTOR}px`,

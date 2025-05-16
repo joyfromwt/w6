@@ -147,9 +147,14 @@ const MainComponent = () => {
       const initialCards = Array.from({ length: 10 }, (_, i) => ({
         id: `${i + 1}`,
         title: `(${(i + 1).toString().padStart(3, '0')})`,
-        image: i < 3 ? ['/cig.png', '/airpod.png', '/starbucks.png'][i] : undefined,
-        position: { 
-          x: Math.random() * (100 - (CARD_WIDTH_PX / sectionRef.current.offsetWidth * 100)), 
+        image:
+          i < 3
+            ? ['/cig.png', '/airpod.png', '/starbucks.png'][i]
+            : i === 3
+            ? '/multitab.png'
+            : undefined,
+        position: {
+          x: Math.random() * (100 - (CARD_WIDTH_PX / sectionRef.current.offsetWidth * 100)),
           y: Math.random() * (100 - (CARD_HEIGHT_PX / sectionRef.current.offsetHeight * 100))
         },
         velocity: getRandomVelocity(),
@@ -240,9 +245,12 @@ const MainComponent = () => {
 
   const handleMouseUp = useCallback(() => {
     if (draggingCard) {
-      setCards(prevCards => prevCards.map((card, i) => 
-        i === draggingCard.index ? { ...card, velocity: getRandomVelocity() } : card
-      ));
+      cardsRef.current = cardsRef.current.map((card, i) =>
+        i === draggingCard.index
+          ? { ...card, velocity: getRandomVelocity() }
+          : card
+      );
+      setCards([...cardsRef.current]);
       setDraggingCard(null);
     }
   }, [draggingCard]);
@@ -269,7 +277,10 @@ const MainComponent = () => {
       const deltaTime = currentTime - lastTime;
       lastTime = currentTime;
       cardsRef.current = cardsRef.current.map((card, index) => {
-        if (draggingCard && draggingCard.index === index) return card;
+        if ((draggingCard && draggingCard.index === index) ||
+            (hoveredCardDetails && hoveredCardDetails.project && hoveredCardDetails.project.id === card.id)) {
+          return { ...card, velocity: { x: 0, y: 0 } };
+        }
         const speed = 0.01;
         let newX = card.position.x + card.velocity.x * speed * deltaTime;
         let newY = card.position.y + card.velocity.y * speed * deltaTime;
@@ -294,7 +305,7 @@ const MainComponent = () => {
     };
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [cards.length, draggingCard]);
+  }, [cards.length, draggingCard, hoveredCardDetails]);
 
   const handleSectionMouseEnter = () => {
     setIsTextCursorVisible(true);
@@ -303,6 +314,14 @@ const MainComponent = () => {
     setShowCustomCursor(false);
     setHoveredCardDetails(null);
     setIsTextCursorVisible(false);
+    if (hoveredCardDetails && hoveredCardDetails.project) {
+      cardsRef.current = cardsRef.current.map(card =>
+        card.id === hoveredCardDetails.project.id
+          ? { ...card, velocity: getRandomVelocity() }
+          : card
+      );
+      setCards([...cardsRef.current]);
+    }
   };
 
   const handleCardMouseDown = (e, index) => {
@@ -320,6 +339,20 @@ const MainComponent = () => {
     }
     setMouseDownPos(null);
   };
+
+  useEffect(() => {
+    if (!hoveredCardDetails) {
+      let changed = false;
+      cardsRef.current = cardsRef.current.map(card => {
+        if (card.velocity.x === 0 && card.velocity.y === 0) {
+          changed = true;
+          return { ...card, velocity: getRandomVelocity() };
+        }
+        return card;
+      });
+      if (changed) setCards([...cardsRef.current]);
+    }
+  }, [hoveredCardDetails]);
 
   return (
     <Container className={spaceMono.className} ref={containerRef}>
