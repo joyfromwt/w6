@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실시간 웹캠 객체 감지</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            text-align: center;
+        }
+        #webcam-container {
+            width: 200px; /* 요청된 웹캠 가로 크기 */
+            /* 높이는 웹캠 영상의 비율에 따라 자동으로 조절됩니다. */
+            position: relative; /* 오버레이 캔버스의 기준점 */
+            margin-bottom: 20px;
+            border: 1px solid #ccc; /* 웹캠 영역 시각적 구분 */
+        }
+        #webcam-feed-canvas { /* Teachable Machine 라이브러리가 생성하는 캔버스 */
+            width: 100%;
+            height: auto; /* 비율 유지 */
+            display: block; /* 불필요한 공백 제거 */
+        }
+        #overlay-canvas { /* 감지된 객체에 사각형을 그릴 캔버스 */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* 아래 캔버스/비디오 이벤트 방해 방지 */
+        }
+        #label-container {
+            margin-top: 10px;
+            text-align: center;
+        }
+        #label-container div {
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .error-message {
+            color: red;
+            font-weight: bold;
+            padding: 10px;
+            border: 1px solid red;
+            margin-bottom:10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>실시간 웹캠 객체 감지 (Teachable Machine)</h1>
+
+    <div id="info-message"></div>
+    <div id="webcam-container">
+        <!-- 웹캠 영상 및 오버레이가 여기에 추가됩니다. -->
+    </div>
+    <div id="label-container">
+        <!-- 감지 결과 레이블이 여기에 표시됩니다. -->
+    </div>
+
+    <!-- TensorFlow.js 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <!-- Teachable Machine 이미지 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script type="text/javascript">
+        // ------------------------------------------------------------------------------------
+        // 중요: 아래 URL을 사용자의 Teachable Machine 모델 URL로 교체해주세요.
+        // 예시: const MODEL_URL = "https://teachablemachine.withgoogle.com/models/XXXXXX/";
+        // ------------------------------------------------------------------------------------
+        const USER_MODEL_URL = "https://teachablemachine.withgoogle.com/models/CHbBGG7ei/"; // <--- 사용자 URL로 수정됨!
+
+        // 전역 변수 선언
+        let model, webcam, labelContainer, maxPredictions;
+        let overlayCanvas, overlayCtx;
+        const WEBCAM_VIEW_WIDTH = 200; // 웹캠 뷰의 CSS 너비
+
+        /**
+         * 감지된 객체 정보를 처리하는 외부 함수 (사용자 정의 가능)
+         * @param {string} className - 감지된 객체의 클래스 이름
+         * @param {number} probability - 감지 확률 (0.0 ~ 1.0)
+         * @param {object} coordinates - 객체의 좌표 정보 (현재는 웹캠 전체 프레임)
+         * @param {number} coordinates.x - 사각형 시작 x 좌표
+         * @param {number} coordinates.y - 사각형 시작 y 좌표
+         * @param {number} coordinates.width - 사각형 너비
+         * @param {number} coordinates.height - 사각형 높이
+         */
+        function handleDetectedObject(className, probability, coordinates) {
+            console.log(
+                "외부 함수 호출 - 감지된 객체:", className,
+                "확률:", probability.toFixed(2),
+                "좌표:", `(x: ${coordinates.x}, y: ${coordinates.y}, w: ${coordinates.width}, h: ${coordinates.height})`
+            );
+            // 여기에 추가적인 로직을 구현할 수 있습니다.
+            // 예를 들어, 특정 객체가 감지되면 다른 동작을 수행하도록 할 수 있습니다.
+        }
+
+        /**
+         * 초기화 함수: 모델 로드, 웹캠 설정, 예측 루프 시작
+         */
+        async function init() {
+            const infoMessageDiv = document.getElementById("info-message");
+            labelContainer = document.getElementById("label-container"); // 오류 메시지 표시를 위해 먼저 할당
+            
+            // 모델 URL이 기본값인지 확인
+            if (USER_MODEL_URL === "YOUR_TM_MODEL_URL_HERE" || !USER_MODEL_URL) {
+                const errorMsg = "오류: Teachable Machine 모델 URL이 설정되지 않았습니다. 코드 상단의 'USER_MODEL_URL' 변수를 실제 모델 URL로 수정해주세요.";
+                console.error(errorMsg);
+                infoMessageDiv.innerHTML = `<p class="error-message">${errorMsg}</p>`;
+                return;
+            }
+
+            const modelURL = USER_MODEL_URL + "model.json";
+            const metadataURL = USER_MODEL_URL + "metadata.json";
+
+            // 모델 로드 시도
+            try {
+                infoMessageDiv.innerText = "모델을 로드하는 중...";
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+                infoMessageDiv.innerText = "모델 로드 완료.";
+            } catch (error) {
+                console.error("모델 로드 중 오류:", error);
+                const errorMsg = `모델 로드에 실패했습니다. URL(${USER_MODEL_URL}) 및 네트워크 연결을 확인해주세요. 오류: ${error.message}`;
+                infoMessageDiv.innerHTML = `<p class="error-message">${errorMsg}</p>`;
+                return;
+            }
+
+            // 웹캠 설정 (내부 캡처 해상도는 Teachable Machine 학습 시 설정과 유사하게)
+            // Teachable Machine은 보통 정사각형 입력을 사용하므로 너비와 높이를 동일하게 설정합니다.
+            // WEBCAM_VIEW_WIDTH는 CSS 표시 너비이며, 실제 캡처 해상도는 여기서 설정합니다.
+            // TM이 사용하는 일반적인 해상도인 224x224 또는 유사한 값을 사용할 수 있습니다.
+            const captureResolution = 224; // 모델 학습 시 사용한 해상도와 유사하게
+            webcam = new tmImage.Webcam(captureResolution, captureResolution, true); // (캡처 너비, 캡처 높이, 좌우반전)
+
+            try {
+                infoMessageDiv.innerText = "웹캠 접근 중...";
+                await webcam.setup(); // 웹캠 접근 권한 요청
+                await webcam.play();
+                infoMessageDiv.innerText = "웹캠이 활성화되었습니다. 객체 감지를 시작합니다.";
+            } catch (e) {
+                console.error("웹캠 설정 오류:", e);
+                const errorMsg = `웹캠을 시작할 수 없습니다. 카메라 접근 권한을 허용했는지 확인해주세요. 오류: ${e.message}`;
+                infoMessageDiv.innerHTML = `<p class="error-message">${errorMsg}</p>`;
+                return;
+            }
+
+            // 웹캠 컨테이너 가져오기 및 초기화
+            const webcamContainer = document.getElementById("webcam-container");
+            webcamContainer.innerHTML = ''; // 이전 내용 삭제
+
+            // Teachable Machine 웹캠 캔버스 (실제 영상이 표시될 캔버스)
+            webcam.canvas.id = "webcam-feed-canvas";
+            webcamContainer.appendChild(webcam.canvas); // DOM에 추가
+
+            // 오버레이 캔버스 생성 및 설정 (사각형 등을 그릴 캔버스)
+            overlayCanvas = document.createElement('canvas');
+            overlayCanvas.id = "overlay-canvas";
+            // 오버레이 캔버스의 픽셀 크기는 웹캠 캡처 캔버스의 실제 픽셀 크기와 일치해야 함
+            overlayCanvas.width = webcam.canvas.width;
+            overlayCanvas.height = webcam.canvas.height;
+            webcamContainer.appendChild(overlayCanvas);
+            overlayCtx = overlayCanvas.getContext("2d");
+            
+            // 레이블 컨테이너 초기화
+            labelContainer.innerHTML = ""; // 이전 레이블 삭제
+            for (let i = 0; i < maxPredictions; i++) { // 각 클래스에 대한 div 생성
+                labelContainer.appendChild(document.createElement("div"));
+            }
+            
+            // 예측 루프 시작
+            window.requestAnimationFrame(loop);
+        }
+
+        /**
+         * 메인 루프: 웹캠 프레임 업데이트 및 예측 반복
+         */
+        async function loop() {
+            if (webcam) {
+                webcam.update(); // 웹캠의 현재 프레임으로 업데이트
+                await predict(); // 예측 실행
+                window.requestAnimationFrame(loop); // 다음 프레임에 루프 재호출
+            }
+        }
+
+        /**
+         * 예측 함수: 현재 웹캠 프레임으로 예측 실행 및 결과 표시
+         */
+        async function predict() {
+            if (!model || !webcam || !webcam.canvas || !overlayCtx) return;
+
+            // model.predict 메서드는 HTMLImageElement, HTMLCanvasElement, HTMLVideoElement 또는 ImageData를 인자로 받음
+            const prediction = await model.predict(webcam.canvas);
+
+            // 오버레이 캔버스 초기화 (이전 프레임의 사각형 제거)
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            let topPrediction = null; // 가장 확률이 높은 예측 저장용
+
+            // 모든 예측 결과 순회 및 표시
+            for (let i = 0; i < maxPredictions; i++) {
+                const probability = prediction[i].probability;
+                const className = prediction[i].className;
+                const classPredictionText = `${className}: ${probability.toFixed(2)}`;
+                
+                if (labelContainer.childNodes[i]) {
+                    labelContainer.childNodes[i].innerHTML = classPredictionText;
+                }
+
+                // 가장 확률 높은 예측 업데이트
+                if (!topPrediction || probability > topPrediction.probability) {
+                    topPrediction = prediction[i];
+                }
+            }
+
+            // 특정 확률 임계값을 넘는 가장 높은 예측이 있다면 사각형 표시
+            const confidenceThreshold = 0.7; // 70% 이상 확신할 때 (조정 가능)
+            if (topPrediction && topPrediction.probability > confidenceThreshold) {
+                overlayCtx.strokeStyle = "red"; // 사각형 색상
+                overlayCtx.lineWidth = 3;      // 사각형 선 두께
+                // 이미지 분류 모델이므로, 프레임 전체에 사각형을 그림
+                overlayCtx.strokeRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+                const coordinates = {
+                    x: 0,
+                    y: 0,
+                    width: overlayCanvas.width,
+                    height: overlayCanvas.height
+                };
+                
+                // 콘솔에 정보 출력
+                console.log(
+                    `감지됨: ${topPrediction.className}, ` +
+                    `확률: ${topPrediction.probability.toFixed(2)}, ` +
+                    `좌표: (x: ${coordinates.x}, y: ${coordinates.y}, w: ${coordinates.width}, h: ${coordinates.height})`
+                );
+
+                // 외부 함수로 정보 전달
+                handleDetectedObject(topPrediction.className, topPrediction.probability, coordinates);
+            }
+        }
+
+        // DOM이 로드된 후 초기화 함수 실행
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html> 

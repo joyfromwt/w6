@@ -84,17 +84,21 @@ export const ProjectCard = styled.div`
   user-select: none;
   touch-action: none;
   transition: transform 0.3s ease;
+  display: flex;
+  justify-content: center;
   align-items: center;
 
   h3 {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: calc(50% - 80px);
+    left: 50%;
+    transform: translate(-50%, -50%);
     margin: 0;
     color: #A8A8A8;
     font-size: 14px;
     z-index: 2;
     font-family: 'G2ErikaMono-Medium';
+    text-align: center;
   }
 
   img {
@@ -103,52 +107,6 @@ export const ProjectCard = styled.div`
     object-fit: cover;
     border-radius: 10px;
     transition: opacity 0.3s ease;
-  }
-`;
-
-export const MagnifyingGlassContainer = styled.div`
-  position: fixed;
-  width: 170px;
- height: 120px;
-  border: 1px solid rgba(255,64,151,0);
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  z-index: 9999;
-  overflow: hidden;
-  /* background-color: rgba(255, 255, 255, 0.1); */
-  /* backdrop-filter: blur(5px); */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-`;
-
-export const MagnifyingGlassContent = styled.div`
-  /* 이 부분은 MagnifyingGlassContent.js 파일로 관리되므로, 
-     여기서는 기본적인 플레이스홀더만 남기거나 비워둘 수 있습니다. 
-     하지만 이전 상태에서는 여기에 내용이 없었습니다. */
-`;
-
-export const SocialLinks = styled.div`
-  display: flex;
-  gap: 1.5rem;
-  margin-top: 2rem;
-  justify-content: center;
-`;
-
-export const Link = styled.a`
-  color: #A8A8A8;
-  text-decoration: none;
-  font-size: 0.8rem;
-  transition: all 0.2s ease;
-  padding: 0.5rem 1rem;
-  border-radius: 0;
-  background: transparent;
-  letter-spacing: 1px;
-
-  &:hover {
-    color: #A8A8A8;
-    background: #F8F8F8;
-    transform: translateY(-2px);
   }
 `;
 
@@ -161,16 +119,6 @@ export const TextCursor = styled.div`
   z-index: 10000;
   white-space: nowrap;
   font-family: 'G2ErikaMono-Medium';
-`;
-
-export const MagnifyingGlassLabel = styled.div`
-  position: fixed;
-  font-size: 1.0rem;
-  color: #ff4097;
-  font-family: 'G2ErikaMono-Medium';
-  pointer-events: none;
-  white-space: nowrap;
-  z-index: 10000;
 `;
 
 export const RulerContainer = styled.div`
@@ -222,9 +170,66 @@ export const RulerLabel = styled.span`
   }
 `;
 
-export const MagnifiedImage = styled.img`
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  display: block;
+export const WebcamContainer = styled.div`
+  position: fixed; /* 화면 기준으로 위치 고정 */
+  top: 150px; /* 상단에서 20px 간격 */
+  right: 162px; /* 기존 142px에서 +20px 하여 왼쪽으로 20px 이동 */
+  width: 300px;
+  height: 150px; /* 웹캠 높이를 150px으로 변경 */
+  background-color: #000;
+  border: 1px solid #A8A8A8;
+  z-index: 10000; /* 다른 요소들 위에 표시 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  overflow: hidden; /* 비디오가 컨테이너를 넘어갈 경우 숨김 */
+
+  video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+
+  canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+`;
+
+export const WebcamLabel = styled.div`
+  position: fixed; 
+  top: calc(150px + 150px + 5px); /* WebcamContainer 아래에 위치 (top + height + margin) */
+  right: 162px; /* WebcamContainer와 동일하게 162px로 변경 */
+  width: 300px; /* WebcamContainer와 동일한 width 값 */
+  padding-left: 5px; /* 좌측 여백 약간 추가 */
+  color: #A8A8A8;
+  font-size: 0.8rem;
+  text-align: left; /* 텍스트를 왼쪽으로 정렬 */
+  z-index: 10001; 
+  pointer-events: none; 
+  font-family: 'G2ErikaMono-Medium';
+  div {
+    margin-bottom: 0.2rem; /* 줄 간격 */
+  }
+`;
+
+export const NextButton = styled.button`
+  position: fixed;
+  bottom: 20px;
+  right: 162px;
+  padding: 10px 20px;
+  background-color: #A8A8A8;
+  color: #000;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: 'G2ErikaMono-Medium';
+  font-size: 1rem;
+  z-index: 1000; // 다른 요소들 위에 오도록 z-index 설정
+
+  &:hover {
+    background-color: #fff;
+  }
 `;
