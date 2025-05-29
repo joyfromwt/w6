@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
+  ErikaMonoFont,
   Container,
   Content,
   Header,
   Title,
-  Description,
+  Subtitle,
   ImageContainer,
   InfoSection,
   InfoTitle,
@@ -108,6 +109,7 @@ const ProjectDetail = ({ project }) => {
 
   return (
     <Container ref={containerRef}>
+      <ErikaMonoFont />
       <RulerContainer side="left">
         {rulerTicks.map(tick => (
           <React.Fragment key={`left-tick-${tick.yPos.toFixed(3)}-${tick.label || ''}`}>
@@ -128,7 +130,7 @@ const ProjectDetail = ({ project }) => {
       <Content>
         <Header>
           <Title>{project.title}</Title>
-          <Description>{project.description}</Description>
+          <Subtitle>{project.description}</Subtitle>
         </Header>
 
         <ImageContainer>
@@ -145,7 +147,7 @@ const ProjectDetail = ({ project }) => {
 
         <InfoSection>
           <InfoTitle>Overview</InfoTitle>
-          <Description>{project.overview}</Description>
+          <Subtitle>{project.overview}</Subtitle>
         </InfoSection>
 
         <InfoSection>
@@ -161,7 +163,7 @@ const ProjectDetail = ({ project }) => {
           <InfoSection>
             <InfoTitle>Live Demo</InfoTitle>
             <Link href={project.demoUrl} passHref>
-              <BackButton as="a" target="_blank" rel="noopener noreferrer">
+              <BackButton target="_blank" rel="noopener noreferrer">
                 View Demo
               </BackButton>
             </Link>

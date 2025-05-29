@@ -68,7 +68,7 @@ export const Section = styled.section`
   margin: 6rem 0;
   padding: 0 1rem;
   position: relative;
-  height: 100vh;
+  height: auto;
   overflow: visible;
   &:hover {
     cursor: none;

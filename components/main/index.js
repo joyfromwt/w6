@@ -435,6 +435,7 @@ const MainComponent = () => {
         ref={sectionRef}
         onMouseEnter={handleSectionMouseEnter}
         onMouseLeave={handleSectionMouseLeave}
+        onMouseMove={handleGlobalMouseMove}
       >
         {cardsRef.current.map((project, index) => (
             <ProjectCard 
@@ -470,14 +471,14 @@ const MainComponent = () => {
         }}
       />
 
-      <SocialLinks>
+      {/* <SocialLinks>
         <StyledLink href="https://github.com" target="_blank" rel="noopener noreferrer">
           GitHub
         </StyledLink>
         <StyledLink href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
           LinkedIn
         </StyledLink>
-      </SocialLinks>
+      </SocialLinks> */}
     </Container>
   );
 };
