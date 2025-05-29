@@ -151,7 +151,19 @@ const MainComponent = () => {
           i < 3
             ? ['/cig.png', '/airpod.png', '/starbucks.png'][i]
             : i === 3
-            ? '/multitab.png'
+            ? '/starbucks.png'
+            : i === 4
+            ? '/glass.png'
+            : i === 5
+            ? '/keyboard.png'
+            : i === 6
+            ? '/iphone.png'
+            : i === 7
+            ? '/straw.png'
+            : i === 8
+            ? '/pigeon.png'
+            : i === 9
+            ? '/um.png'
             : undefined,
         position: {
           x: Math.random() * (100 - (CARD_WIDTH_PX / sectionRef.current.offsetWidth * 100)),
@@ -272,7 +284,8 @@ const MainComponent = () => {
     if (cards.length === 0) return;
     let animationFrameId;
     let lastTime = performance.now();
-    let lastRender = performance.now();
+    let frameCount = 0;
+    let prevCardsSnapshot = JSON.stringify(cardsRef.current);
     const animate = (currentTime) => {
       const deltaTime = currentTime - lastTime;
       lastTime = currentTime;
@@ -296,10 +309,13 @@ const MainComponent = () => {
         }
         return { ...card, position: { x: newX, y: newY }, velocity: { x: newVelocityX, y: newVelocityY } };
       });
-      if (currentTime - lastRender > 100) {
-        setCards([...cardsRef.current]);
-        setRenderTick(tick => tick + 1);
-        lastRender = currentTime;
+      frameCount++;
+      if (frameCount % 32 === 0) {
+        const snapshot = JSON.stringify(cardsRef.current);
+        if (snapshot !== prevCardsSnapshot) {
+          setCards([...cardsRef.current]);
+          prevCardsSnapshot = snapshot;
+        }
       }
       animationFrameId = requestAnimationFrame(animate);
     };
@@ -402,7 +418,10 @@ const MainComponent = () => {
               top: `${customCursorPosition.y}px`,
             }}
           >
-            <MagnifyingGlassContent hoveredCardDetails={hoveredCardDetails} />
+            <MagnifyingGlassContent 
+              hoveredCardDetails={hoveredCardDetails}
+              customCursorPosition={customCursorPosition}
+            />
           </MagnifyingGlassContainer>
         </>
       )}

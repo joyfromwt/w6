@@ -1,17 +1,23 @@
 import React from 'react';
 import styled from 'styled-components';
 import Image from 'next/image';
+import TextArt from './TextArt';
+import { MagnifyingGlassLabel } from './styles';
 
 const MAGNIFY_FACTOR = 3.5;
 const CURSOR_WIDTH = 170;
 const CURSOR_HEIGHT = 120;
 const OVERLAY_COLOR = '#ff4097';
 const MARK_SIZE = 4;
+const MAGNIFYING_GLASS_SIZE_PX = 170;
 
 const ContentWrapper = styled.div`
   position: absolute;
   transform-origin: 0 0;
   will-change: transform, left, top;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 `;
 
 const InnerCardView = styled.div`
@@ -53,7 +59,7 @@ function FocusOverlay() {
       <rect x={WIDTH-CORNER} y={0} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
       <rect x={0} y={HEIGHT-CORNER} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
       <rect x={WIDTH-CORNER} y={HEIGHT-CORNER} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
-      {/* 네 변의 중간 6x6 사각형 */}
+      {/* 네 변의 중간 6x6 사각형 (흰색이면 opacity 0) */}
       <rect x={CENTER_X-CORNER/2} y={0} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
       <rect x={CENTER_X-CORNER/2} y={HEIGHT-CORNER} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
       <rect x={0} y={CENTER_Y-CORNER/2} width={CORNER} height={CORNER} stroke={OVERLAY_COLOR} strokeWidth={0.5} fill={OVERLAY_COLOR} />
@@ -62,7 +68,7 @@ function FocusOverlay() {
   );
 }
 
-export default function MagnifyingGlassContent({ hoveredCardDetails }) {
+export default function MagnifyingGlassContent({ hoveredCardDetails, customCursorPosition }) {
   if (!hoveredCardDetails || !hoveredCardDetails.project) {
     return null;
   }
@@ -76,7 +82,7 @@ export default function MagnifyingGlassContent({ hoveredCardDetails }) {
   const textArtHeight = textArtLines * fontSizePx;
   const magnifiedImgHeight = cardHeight * MAGNIFY_FACTOR;
   const centerDiff = (textArtHeight / 2) - (magnifiedImgHeight / 2);
-  const contentTop = (CURSOR_HEIGHT / 2) - magnifiedFocusY + centerDiff + 600 - 100;
+  const contentTop = (CURSOR_HEIGHT / 2) - magnifiedFocusY + centerDiff + 580 - 100;
 
   return (
     <div style={{ position: 'relative', width: CURSOR_WIDTH, height: CURSOR_HEIGHT }}>
@@ -98,8 +104,24 @@ export default function MagnifyingGlassContent({ hoveredCardDetails }) {
             />
           )}
         </InnerCardView>
+        <TextArt
+          src={hoveredCardDetails.project.image}
+          fontSize="1.2rem"
+          baseSize={80}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+        />
       </ContentWrapper>
       <FocusOverlay />
+      <MagnifyingGlassLabel
+        fontFamily={'G2ErikaMono-Medium'}
+        style={{
+          left: `${customCursorPosition.x}px`,
+          top: `${customCursorPosition.y - (MAGNIFYING_GLASS_SIZE_PX / 2) - 5}px`,
+          transform: 'translate(-50%, -100%)',
+        }}
+      >
+        it seems like...
+      </MagnifyingGlassLabel>
     </div>
   );
 } 

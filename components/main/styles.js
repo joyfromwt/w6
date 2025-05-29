@@ -13,10 +13,10 @@ export const ErikaMonoFont = createGlobalStyle`
 
 export const Container = styled.div`
   min-height: 100vh;
-  padding: 2rem 2rem 2rem 0;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   background-color: #000;
   color: #A8A8A8;
   position: relative;
@@ -28,18 +28,18 @@ export const Container = styled.div`
 
 export const Header = styled.header`
   margin-bottom: 0rem;
-  text-align: left;
+  text-align: center;
   max-width: 1400px;
   width: 100%;
-  margin-left: 0px;
 `;
 
 export const Title = styled.h1`
   font-size: 2rem;
   font-weight: 400;
   color: #A8A8A8;
+  margin-top: 105px;
   margin-bottom: 0.5rem;
-  margin-left: 150px;
+  margin-left: 100px;
   margin-right: 0;
   text-shadow: 0 0 0px rgba(168, 168, 168, 0.2);
   letter-spacing: 0px;
@@ -54,13 +54,12 @@ export const Subtitle = styled.p`
   font-family: 'G2ErikaMono-Medium';
   font-size: 0.9rem;
   color: #A8A8A8;
-  margin: 0.5rem auto 0;
+  margin: 0.5rem 0 0 100px;
   letter-spacing: 0.5px;
   opacity: 0.8;
   max-width: 600px;
   width: 100%;
   text-align: left;
-  margin-left: 150px;
 `;
 
 export const Section = styled.section`
@@ -110,14 +109,14 @@ export const ProjectCard = styled.div`
 export const MagnifyingGlassContainer = styled.div`
   position: fixed;
   width: 170px;
-  height: 120px;
+ height: 120px;
   border: 1px solid rgba(255,64,151,0);
   pointer-events: none;
   transform: translate(-50%, -50%);
   z-index: 9999;
   overflow: hidden;
-  background-color: rgba(0,0,0,0);
-  backdrop-filter: none;
+  /* background-color: rgba(255, 255, 255, 0.1); */
+  /* backdrop-filter: blur(5px); */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -221,4 +220,11 @@ export const RulerLabel = styled.span`
     :
     `left: 20px;`
   }
+`;
+
+export const MagnifiedImage = styled.img`
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
 `;
