@@ -218,18 +218,90 @@ export const WebcamLabel = styled.div`
 export const NextButton = styled.button`
   position: fixed;
   bottom: 20px;
-  right: 162px;
+  right: 20px;
+  background-color: #000;
+  color: white;
+  border: 1px solid #FFF;
   padding: 10px 20px;
-  background-color: #A8A8A8;
-  color: #000;
-  border: none;
-  border-radius: 0;
-  cursor: pointer;
-  font-family: 'G2ErikaMono-Medium';
   font-size: 1rem;
-  z-index: 1000; // 다른 요소들 위에 오도록 z-index 설정
+  cursor: pointer;
+  border-radius: 0;
+  z-index: 1002;
+  font-family: 'G2ErikaMono-Medium', monospace;
 
   &:hover {
-    background-color: #fff;
+    background-color: #FFF;
+    color: #000;
+  }
+`;
+
+export const AllCardsDroppedPopupOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000; 
+`;
+
+export const AllCardsDroppedPopupContent = styled.div`
+  background-color: #000; 
+  color: #fff; 
+  border: 0.5px solid #FFF;
+  padding: 30px;
+  border-radius: 0;
+  width: 80%;
+  max-width: 500px;
+  text-align: center;
+  font-family: 'G2ErikaMono-Medium', monospace;
+
+  h4 {
+    margin-top: 0;
+    color: #FFD700; 
+    font-family: inherit;
+  }
+
+  p {
+    font-family: inherit;
+  }
+
+  ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 20px 0;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: inherit;
+  }
+
+  li {
+    padding: 8px 0;
+    border-bottom: 1px solid #444;
+    font-family: inherit;
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  button {
+    background-color: #000;
+    color: #fff;
+    border: 1px solid #FFF;
+    padding: 10px 20px;
+    border-radius: 0;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 20px;
+    transition: background-color 0.2s, color 0.2s;
+    font-family: inherit;
+
+    &:hover {
+      background-color: #FFF;
+      color: #000;
+    }
   }
 `;
