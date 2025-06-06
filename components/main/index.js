@@ -75,6 +75,10 @@ const MainComponent = () => {
   const [droppedCardIds, setDroppedCardIds] = useState(new Set());
   const [isAllCardsDroppedPopupVisible, setIsAllCardsDroppedPopupVisible] = useState(false);
   const [sortedDroppedCardNames, setSortedDroppedCardNames] = useState([]);
+  const [popupImage, setPopupImage] = useState('');
+  const [nextButtonClicked, setNextButtonClicked] = useState(false);
+  const [randomSquares, setRandomSquares] = useState([]);
+  const [croppedImageUrls, setCroppedImageUrls] = useState([]);
   const animateLoopIdRef = useRef(null);
   const lastTimeRef = useRef(performance.now());
   const prevAnimateSnapshotRef = useRef(null);
@@ -449,7 +453,9 @@ const MainComponent = () => {
   }, []);
 
   useEffect(() => {
-    if (!isClient) {
+    if (!isClient || isAllCardsDroppedPopupVisible) {
+      // 팝업이 보이거나 클라이언트가 아니면 웹캠을 설정하지 않고,
+      // 이전 effect의 cleanup 함수가 호출되어 리소스를 정리합니다.
       return;
     }
 
@@ -468,9 +474,12 @@ const MainComponent = () => {
           if (videoRef.current) {
             videoRef.current.srcObject = localStream;
             videoRef.current.onloadedmetadata = () => {
-              videoRef.current.play();
-              console.log("Webcam stream started.");
-              detectFrameContents();
+              // 콜백이 실행되는 시점에 videoRef.current가 여전히 유효한지 확인합니다.
+              if (videoRef.current) {
+                videoRef.current.play();
+                console.log("Webcam stream started.");
+                detectFrameContents();
+              }
             };
           }
         } catch (error) {
@@ -503,7 +512,7 @@ const MainComponent = () => {
       }
       console.log("Cleanup complete.");
     };
-  }, [isClient]);
+  }, [isClient, isAllCardsDroppedPopupVisible]);
 
   const detectFrameContents = async () => {
     if (!videoRef.current || videoRef.current.readyState < 2 || !cocoSsdModelRef.current || !canvasRef.current || !sectionRef.current) {
@@ -625,46 +634,147 @@ const MainComponent = () => {
   };
 
   const handleNextButtonClick = () => {
-    router.push('/more');
+    if (cards.length > 0) {
+      setNextButtonClicked(true);
+    }
   };
 
-  // useEffect to check if all cards are dropped and show popup
+  // 팝업 표시 및 내용 생성을 위한 통합 useEffect
   useEffect(() => {
-    if (cards.length === 0) return; // Don't run if no cards are initialized
+    const allCardsAreDropped = cards.length > 0 && droppedCardIds.size === cards.length;
 
-    const allCardsAreDropped = cards.every(card => droppedCardIds.has(card.id));
+    if (allCardsAreDropped || nextButtonClicked) {
+      if (!isAllCardsDroppedPopupVisible) { // 팝업이 아직 안보일 때만 내용 재생성
+        const sortedCards = [...cards].sort((a, b) => a.position.x - b.position.x);
+        const sortedNames = sortedCards.map(card => 
+          card.image.split('/').pop().split('.').slice(0, -1).join('.')
+        );
+        const allImages = cards.map(card => card.image);
+        const randomImageSrc = allImages[Math.floor(Math.random() * allImages.length)];
+        
+        // --- Canvas를 이용한 랜덤 사각형 위치 생성 로직 ---
+        const img = new window.Image();
+        img.crossOrigin = "Anonymous"; // 로컬 이미지이므로 필수적이지는 않으나 좋은 습관입니다.
+        img.src = randomImageSrc;
 
-    if (allCardsAreDropped) {
-      const sortedCards = [...cards]
-        .filter(card => droppedCardIds.has(card.id)) // Ensure only dropped cards are considered (redundant if allCardsAreDropped is true, but safe)
-        .sort((a, b) => a.position.x - b.position.x);
-      
-      const names = sortedCards.map(card => {
-        const imageNameWithExt = card.image.split('/').pop(); // e.g., "iphone.png"
-        return imageNameWithExt.substring(0, imageNameWithExt.lastIndexOf('.')) || imageNameWithExt; // "iphone"
-      });
-      
-      setSortedDroppedCardNames(names);
-      setIsAllCardsDroppedPopupVisible(true);
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const imageSize = 300;
+          const squareSize = 20;
+          canvas.width = imageSize;
+          canvas.height = imageSize;
+
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(img, 0, 0, imageSize, imageSize);
+          
+          let imageData;
+          try {
+            imageData = ctx.getImageData(0, 0, imageSize, imageSize).data;
+          } catch (e) {
+            console.error("Error getting image data:", e);
+            const fallbackSquares = Array.from({ length: 4 }, () => ({
+              top: `${Math.random() * (imageSize - squareSize)}px`,
+              left: `${Math.random() * (imageSize - squareSize)}px`,
+            }));
+            setRandomSquares(fallbackSquares);
+            setCroppedImageUrls([]);
+            setPopupImage(randomImageSrc);
+            setSortedDroppedCardNames(sortedNames);
+            setIsAllCardsDroppedPopupVisible(true);
+            return;
+          }
+
+          const squares = [];
+          let attempts = 0;
+          const maxAttempts = 5000; // 최대 시도 횟수 증가
+
+          while (squares.length < 4 && attempts < maxAttempts) {
+            const x = Math.floor(Math.random() * (imageSize - squareSize));
+            const y = Math.floor(Math.random() * (imageSize - squareSize));
+            
+            const pointsToCheck = [
+              { cx: x, cy: y }, // top-left
+              { cx: x + squareSize - 1, cy: y }, // top-right
+              { cx: x, cy: y + squareSize - 1 }, // bottom-left
+              { cx: x + squareSize - 1, cy: y + squareSize - 1 }, // bottom-right
+              { cx: x + Math.floor(squareSize / 2), cy: y + Math.floor(squareSize / 2) } // center
+            ];
+
+            let isValidPosition = false;
+            for (const point of pointsToCheck) {
+              const alphaIndex = (point.cy * imageSize + point.cx) * 4 + 3;
+              if (imageData[alphaIndex] > 10) {
+                isValidPosition = true;
+                break;
+              }
+            }
+            
+            if (isValidPosition) {
+              squares.push({ top: `${y}px`, left: `${x}px` });
+            }
+            attempts++;
+          }
+          
+          while (squares.length < 4) {
+            squares.push({
+              top: `${Math.random() * (imageSize - squareSize)}px`,
+              left: `${Math.random() * (imageSize - squareSize)}px`,
+            });
+          }
+
+          // --- 이미지 크롭 로직 ---
+          const urls = [];
+          const cropCanvas = document.createElement('canvas');
+          cropCanvas.width = 100;
+          cropCanvas.height = 100;
+          const cropCtx = cropCanvas.getContext('2d');
+
+          for (const square of squares) {
+            cropCtx.clearRect(0, 0, 100, 100);
+            const sx = parseInt(square.left, 10);
+            const sy = parseInt(square.top, 10);
+            cropCtx.drawImage(img, sx, sy, 20, 20, 0, 0, 100, 100);
+            urls.push(cropCanvas.toDataURL());
+          }
+
+          // 모든 상태를 한 번에 업데이트하여 렌더링을 동기화
+          setCroppedImageUrls(urls);
+          setRandomSquares(squares);
+          setPopupImage(randomImageSrc);
+          setSortedDroppedCardNames(sortedNames);
+          setIsAllCardsDroppedPopupVisible(true);
+        };
+
+        img.onerror = () => {
+          console.error("Failed to load image for canvas processing.");
+           const fallbackSquares = Array.from({ length: 4 }, () => ({
+              top: `${Math.random() * (300 - 20)}px`,
+              left: `${Math.random() * (300 - 20)}px`,
+            }));
+          setRandomSquares(fallbackSquares);
+          setCroppedImageUrls([]);
+          setPopupImage(randomImageSrc);
+          setSortedDroppedCardNames(sortedNames);
+          setIsAllCardsDroppedPopupVisible(true);
+        }
+      }
     } else {
-      // This part is important if cards can be "undropped" or state changes
-      // to ensure popup doesn't persist if condition is no longer met.
-      // However, based on current logic, once all are dropped, they stay dropped.
-      // setIsAllCardsDroppedPopupVisible(false); // Consider if needed for other flows
+      if (isAllCardsDroppedPopupVisible) {
+        setIsAllCardsDroppedPopupVisible(false);
+      }
     }
-  }, [droppedCardIds, cards]); // cards dependency might be too frequent if cards object itself changes often without content change.
-                                // Consider cards.length or a more stable derivative if performance issues arise.
+  }, [cards, droppedCardIds, nextButtonClicked, isAllCardsDroppedPopupVisible]);
 
-  // useEffect for automatic navigation after popup
+  // 팝업이 보이면 3초 후 페이지를 이동시키는 useEffect
   useEffect(() => {
-    let navigationTimer;
+    let timer;
     if (isAllCardsDroppedPopupVisible) {
-      navigationTimer = setTimeout(() => {
+      timer = setTimeout(() => {
         router.push('/more');
-      }, 3000); // 3 seconds
+      }, 3000);
     }
     return () => {
-      clearTimeout(navigationTimer); // Cleanup timer on unmount or if popup closes before 3s
+      clearTimeout(timer); // 컴포넌트 언마운트 또는 팝업이 닫힐 때 타이머 정리
     };
   }, [isAllCardsDroppedPopupVisible, router]);
 
@@ -758,7 +868,7 @@ const MainComponent = () => {
 
   return (
     <Container className={spaceMono.className} ref={containerRef}>
-      {isClient && (
+      {isClient && !isAllCardsDroppedPopupVisible && (
         <>
           <WebcamContainer>
             <video ref={videoRef} autoPlay playsInline muted />
@@ -904,17 +1014,42 @@ const MainComponent = () => {
 
       {/* All Cards Dropped Popup */}
       {isAllCardsDroppedPopupVisible && (
-        // Overlay click still closes, which will cancel the timer due to isAllCardsDroppedPopupVisible changing
-        <AllCardsDroppedPopupOverlay onClick={() => setIsAllCardsDroppedPopupVisible(false)}>
-          <AllCardsDroppedPopupContent onClick={(e) => e.stopPropagation()}>
-            <h4>All Artifacts Secured!</h4>
-            <p>Order of acquisition (by X-coordinate):</p>
-            <ul>
-              {sortedDroppedCardNames.map((name, index) => (
-                <li key={index}>{name}</li>
+        <AllCardsDroppedPopupOverlay>
+          <AllCardsDroppedPopupContent>
+            {popupImage && (
+              <div className="main-content-wrapper">
+                <div className="popup-image-wrapper">
+                  <Image 
+                    src={popupImage} 
+                    alt="Randomly selected artifact" 
+                    width={300} 
+                    height={300}
+                    className="popup-image"
+                  />
+                  {randomSquares.map((pos, index) => (
+                    <div 
+                      key={index}
+                      className="random-square"
+                      style={{ top: pos.top, left: pos.left }}
+                    />
+                  ))}
+                </div>
+                <div className="grid-container">
+                  {croppedImageUrls.map((url, index) => (
+                    <div key={index} className="grid-square">
+                      <img src={url} alt={`Detail crop ${index + 1}`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="words-container">
+              {sortedDroppedCardNames.map((word, index) => (
+                <span key={index} className="word-item">
+                  {word}
+                </span>
               ))}
-            </ul>
-            {/* <button onClick={() => setIsAllCardsDroppedPopupVisible(false)}>Close</button> */}{/* Button removed */}
+            </div>
           </AllCardsDroppedPopupContent>
         </AllCardsDroppedPopupOverlay>
       )}

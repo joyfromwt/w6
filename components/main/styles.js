@@ -249,59 +249,83 @@ export const AllCardsDroppedPopupOverlay = styled.div`
 `;
 
 export const AllCardsDroppedPopupContent = styled.div`
-  background-color: #000; 
-  color: #fff; 
-  border: 0.5px solid #FFF;
-  padding: 30px;
+  background-color: #000;
+  padding: 40px;
+  border: 1px solid #FFD700;
   border-radius: 0;
-  width: 80%;
-  max-width: 500px;
-  text-align: center;
+  color: #FFD700;
   font-family: 'G2ErikaMono-Medium', monospace;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  max-width: 80%;
 
-  h4 {
-    margin-top: 0;
-    color: #FFD700; 
-    font-family: inherit;
+  .main-content-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 30px;
   }
 
-  p {
-    font-family: inherit;
+  .popup-image-wrapper {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    background-color: transparent;
+    border: 0;
   }
 
-  ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 20px 0;
-    max-height: 300px;
-    overflow-y: auto;
-    font-family: inherit;
+  .popup-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
-  li {
-    padding: 8px 0;
-    border-bottom: 1px solid #444;
-    font-family: inherit;
-    &:last-child {
-      border-bottom: none;
+  .random-square {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: transparent;
+    border: 0.5px solid #FFD700;
+  }
+
+  .grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, 100px);
+    grid-template-rows: repeat(2, 100px);
+    gap: 10px;
+  }
+
+  .grid-square {
+    width: 100px;
+    height: 100px;
+    border: 0.5px solid #FFD700;
+    background-color: transparent;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
   }
 
-  button {
-    background-color: #000;
-    color: #fff;
-    border: 1px solid #FFF;
-    padding: 10px 20px;
-    border-radius: 0;
-    cursor: pointer;
-    font-weight: bold;
-    margin-top: 20px;
-    transition: background-color 0.2s, color 0.2s;
-    font-family: inherit;
-
-    &:hover {
-      background-color: #FFF;
-      color: #000;
-    }
+  .words-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5em 1em;
+    justify-content: center;
   }
+
+  .word-item {
+    font-size: 1.2rem;
+  }
+`;
+
+export const ProjectPopupContainer = styled.div`
+  position: fixed;
+  // ... existing code ...
 `;
