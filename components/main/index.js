@@ -79,8 +79,10 @@ const MainComponent = () => {
   const [nextButtonClicked, setNextButtonClicked] = useState(false);
   const [randomSquares, setRandomSquares] = useState([]);
   const [croppedImageUrls, setCroppedImageUrls] = useState([]);
+  const [lineCoordinates, setLineCoordinates] = useState([]);
   const animateLoopIdRef = useRef(null);
   const lastTimeRef = useRef(performance.now());
+  const mainContentRef = useRef(null);
   const prevAnimateSnapshotRef = useRef(null);
   const [lastFixedCardInfo, setLastFixedCardInfo] = useState(null);
   const prevDroppedCardIdsRef = useRef(new Set());
@@ -686,30 +688,22 @@ const MainComponent = () => {
 
           const squares = [];
           let attempts = 0;
-          const maxAttempts = 5000; // 최대 시도 횟수 증가
+          const maxAttempts = 5000;
 
           while (squares.length < 4 && attempts < maxAttempts) {
             const x = Math.floor(Math.random() * (imageSize - squareSize));
             const y = Math.floor(Math.random() * (imageSize - squareSize));
             
-            const pointsToCheck = [
-              { cx: x, cy: y }, // top-left
-              { cx: x + squareSize - 1, cy: y }, // top-right
-              { cx: x, cy: y + squareSize - 1 }, // bottom-left
-              { cx: x + squareSize - 1, cy: y + squareSize - 1 }, // bottom-right
-              { cx: x + Math.floor(squareSize / 2), cy: y + Math.floor(squareSize / 2) } // center
-            ];
-
-            let isValidPosition = false;
-            for (const point of pointsToCheck) {
-              const alphaIndex = (point.cy * imageSize + point.cx) * 4 + 3;
-              if (imageData[alphaIndex] > 10) {
-                isValidPosition = true;
-                break;
+            let totalAlpha = 0;
+            for (let i = 0; i < squareSize; i++) {
+              for (let j = 0; j < squareSize; j++) {
+                const alphaIndex = ((y + j) * imageSize + (x + i)) * 4 + 3;
+                totalAlpha += imageData[alphaIndex];
               }
             }
-            
-            if (isValidPosition) {
+            const avgAlpha = totalAlpha / (squareSize * squareSize);
+
+            if (avgAlpha > 10) {
               squares.push({ top: `${y}px`, left: `${x}px` });
             }
             attempts++;
@@ -761,9 +755,108 @@ const MainComponent = () => {
     } else {
       if (isAllCardsDroppedPopupVisible) {
         setIsAllCardsDroppedPopupVisible(false);
+        setLineCoordinates([]); // 팝업이 닫힐 때 선 좌표 초기화
       }
     }
   }, [cards, droppedCardIds, nextButtonClicked, isAllCardsDroppedPopupVisible]);
+
+  // 선 좌표를 계산하는 useEffect
+  useEffect(() => {
+    if (isAllCardsDroppedPopupVisible && mainContentRef.current && randomSquares.length === 4 && croppedImageUrls.length === 4) {
+      const calculateLines = () => {
+        const wrapperRect = mainContentRef.current.getBoundingClientRect();
+        const leftGrid = mainContentRef.current.children[0];
+        const imageWrapper = mainContentRef.current.children[1];
+        const rightGrid = mainContentRef.current.children[2];
+
+        if (!leftGrid || !imageWrapper || !rightGrid) return;
+        
+        const imageWrapperRect = imageWrapper.getBoundingClientRect();
+        
+        const getRelativePos = (rect) => ({
+            top: rect.top - wrapperRect.top,
+            left: rect.left - wrapperRect.left,
+        });
+
+        const imageWrapperRelPos = getRelativePos(imageWrapperRect);
+        
+        const newLines = [];
+        const squareSize = 20;
+        const gridSize = 100;
+
+        // 작은 사각형들과 큰 사각형(그리드 아이템)들을 1:1로 연결
+        for (let i = 0; i < 4; i++) {
+            const smallSquare = randomSquares[i];
+            
+            // 시작점(x1, y1): 작은 사각형의 중심
+            const x1_center = imageWrapperRelPos.left + parseInt(smallSquare.left, 10) + (squareSize / 2);
+            const y1_center = imageWrapperRelPos.top + parseInt(smallSquare.top, 10) + (squareSize / 2);
+
+            // 끝점(x2, y2): 큰 사각형의 중심
+            let gridItem, gridItemRect;
+            if (i < 2) { // 왼쪽 그리드
+                gridItem = leftGrid.children[i];
+                if(gridItem) gridItemRect = gridItem.getBoundingClientRect();
+            } else { // 오른쪽 그리드
+                gridItem = rightGrid.children[i - 2];
+                if(gridItem) gridItemRect = gridItem.getBoundingClientRect();
+            }
+
+            if (gridItemRect) {
+                const gridItemRelPos = getRelativePos(gridItemRect);
+                const x2_center = gridItemRelPos.left + (gridSize / 2);
+                const y2_center = gridItemRelPos.top + (gridSize / 2);
+
+                // --- Calculate intersection point for the LARGE square (endpoint) ---
+                let x2 = x2_center;
+                let y2 = y2_center;
+                const dx_large = x1_center - x2_center;
+                const dy_large = y1_center - y2_center;
+
+                if (dx_large !== 0 || dy_large !== 0) {
+                    const hw = gridSize / 2;
+                    const hh = gridSize / 2;
+                    if (Math.abs(dy_large * hw) < Math.abs(dx_large * hh)) {
+                        const scale = hw / Math.abs(dx_large);
+                        x2 = x2_center + dx_large * scale;
+                        y2 = y2_center + dy_large * scale;
+                    } else {
+                        const scale = hh / Math.abs(dy_large);
+                        x2 = x2_center + dx_large * scale;
+                        y2 = y2_center + dy_large * scale;
+                    }
+                }
+
+                // --- NEW: Calculate intersection point for the SMALL square (startpoint) ---
+                let x1 = x1_center;
+                let y1 = y1_center;
+                const dx_small = x2 - x1_center;
+                const dy_small = y2 - y1_center;
+
+                if (dx_small !== 0 || dy_small !== 0) {
+                    const hw = squareSize / 2;
+                    const hh = squareSize / 2;
+                    if (Math.abs(dy_small * hw) < Math.abs(dx_small * hh)) {
+                        const scale = hw / Math.abs(dx_small);
+                        x1 = x1_center + dx_small * scale;
+                        y1 = y1_center + dy_small * scale;
+                    } else {
+                        const scale = hh / Math.abs(dy_small);
+                        x1 = x1_center + dx_small * scale;
+                        y1 = y1_center + dy_small * scale;
+                    }
+                }
+                
+                newLines.push({ x1, y1, x2, y2 });
+            }
+        }
+        setLineCoordinates(newLines);
+      };
+
+      const timeoutId = setTimeout(calculateLines, 50);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isAllCardsDroppedPopupVisible, randomSquares, croppedImageUrls]);
 
   // 팝업이 보이면 3초 후 페이지를 이동시키는 useEffect
   useEffect(() => {
@@ -1017,7 +1110,17 @@ const MainComponent = () => {
         <AllCardsDroppedPopupOverlay>
           <AllCardsDroppedPopupContent>
             {popupImage && (
-              <div className="main-content-wrapper">
+              <div className="main-content-wrapper" ref={mainContentRef}>
+                {/* Left Grid */}
+                <div className="grid-container">
+                  {croppedImageUrls.slice(0, 2).map((url, index) => (
+                    <div key={`left-crop-${index}`} className="grid-square">
+                      <img src={url} alt={`Detail crop ${index + 1}`} />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Center Image */}
                 <div className="popup-image-wrapper">
                   <Image 
                     src={popupImage} 
@@ -1034,13 +1137,32 @@ const MainComponent = () => {
                     />
                   ))}
                 </div>
+
+                {/* Right Grid */}
                 <div className="grid-container">
-                  {croppedImageUrls.map((url, index) => (
-                    <div key={index} className="grid-square">
-                      <img src={url} alt={`Detail crop ${index + 1}`} />
+                  {croppedImageUrls.slice(2, 4).map((url, index) => (
+                    <div key={`right-crop-${index}`} className="grid-square">
+                      <img src={url} alt={`Detail crop ${index + 3}`} />
                     </div>
                   ))}
                 </div>
+                
+                {/* SVG for drawing lines */}
+                {lineCoordinates.length === 4 && (
+                  <svg className="line-svg-overlay">
+                    {lineCoordinates.map((line, index) => (
+                      <line
+                        key={`line-${index}`}
+                        x1={line.x1}
+                        y1={line.y1}
+                        x2={line.x2}
+                        y2={line.y2}
+                        stroke="#FFF"
+                        strokeWidth="0.5"
+                      />
+                    ))}
+                  </svg>
+                )}
               </div>
             )}
             <div className="words-container">

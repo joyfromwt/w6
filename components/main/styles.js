@@ -251,9 +251,9 @@ export const AllCardsDroppedPopupOverlay = styled.div`
 export const AllCardsDroppedPopupContent = styled.div`
   background-color: #000;
   padding: 40px;
-  border: 1px solid #FFD700;
+  border: 1px solid #FFF;
   border-radius: 0;
-  color: #FFD700;
+  color: #FFF;
   font-family: 'G2ErikaMono-Medium', monospace;
   text-align: center;
   display: flex;
@@ -267,6 +267,7 @@ export const AllCardsDroppedPopupContent = styled.div`
     flex-direction: row;
     align-items: center;
     gap: 30px;
+    position: relative;
   }
 
   .popup-image-wrapper {
@@ -275,6 +276,15 @@ export const AllCardsDroppedPopupContent = styled.div`
     height: 300px;
     background-color: transparent;
     border: 0;
+  }
+
+  .line-svg-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
   }
 
   .popup-image {
@@ -288,12 +298,12 @@ export const AllCardsDroppedPopupContent = styled.div`
     width: 20px;
     height: 20px;
     background-color: transparent;
-    border: 0.5px solid #FFD700;
+    border: 0.5px solid #FFF;
   }
 
   .grid-container {
     display: grid;
-    grid-template-columns: repeat(2, 100px);
+    grid-template-columns: 100px;
     grid-template-rows: repeat(2, 100px);
     gap: 10px;
   }
@@ -301,7 +311,7 @@ export const AllCardsDroppedPopupContent = styled.div`
   .grid-square {
     width: 100px;
     height: 100px;
-    border: 0.5px solid #FFD700;
+    border: 0.5px solid #FFF;
     background-color: transparent;
     overflow: hidden;
 
@@ -318,6 +328,7 @@ export const AllCardsDroppedPopupContent = styled.div`
     flex-wrap: wrap;
     gap: 0.5em 1em;
     justify-content: center;
+    color: #FFD700;
   }
 
   .word-item {
