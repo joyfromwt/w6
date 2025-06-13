@@ -24,6 +24,9 @@ import ProjectPopup from './ProjectPopup';
 import TextArt from './TextArt';
 import * as tf from '@tensorflow/tfjs-core';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
+import useAnimationSequence from '../../hooks/useAnimationSequence';
+import GridReveal from './animation/GridReveal';
+import CardSequence from './animation/CardSequence';
 
 const spaceMono = Space_Mono({
   weight: ["400", "700"],
@@ -75,7 +78,8 @@ const MainComponent = () => {
   const [droppedCardIds, setDroppedCardIds] = useState(new Set());
   const [isAllCardsDroppedPopupVisible, setIsAllCardsDroppedPopupVisible] = useState(false);
   const [sortedDroppedCardNames, setSortedDroppedCardNames] = useState([]);
-  const [popupImage, setPopupImage] = useState('');
+  const [popupImages, setPopupImages] = useState([]);
+  const [currentPopupImageIndex, setCurrentPopupImageIndex] = useState(0);
   const [nextButtonClicked, setNextButtonClicked] = useState(false);
   const [randomSquares, setRandomSquares] = useState([]);
   const [croppedImageUrls, setCroppedImageUrls] = useState([]);
@@ -87,6 +91,16 @@ const MainComponent = () => {
   const [lastFixedCardInfo, setLastFixedCardInfo] = useState(null);
   const prevDroppedCardIdsRef = useRef(new Set());
   const droppedCardIdsRef = useRef(droppedCardIds);
+  const [webcamError, setWebcamError] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState('grid');
+
+  const {
+    phase,
+    isGridVisible,
+    isHeaderVisible,
+    isCardsVisible,
+    startNextPhase
+  } = useAnimationSequence();
 
   useEffect(() => {
     droppedCardIdsRef.current = droppedCardIds;
@@ -466,6 +480,7 @@ const MainComponent = () => {
     async function setupWebcamAndCocoSsd() {
       if (typeof window !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
+          setWebcamError(false);
           await tf.ready();
           console.log("TensorFlow.js backend ready:", tf.getBackend());
 
@@ -476,16 +491,20 @@ const MainComponent = () => {
           if (videoRef.current) {
             videoRef.current.srcObject = localStream;
             videoRef.current.onloadedmetadata = () => {
-              // 콜백이 실행되는 시점에 videoRef.current가 여전히 유효한지 확인합니다.
               if (videoRef.current) {
                 videoRef.current.play();
                 console.log("Webcam stream started.");
                 detectFrameContents();
+                // 카메라 준비 완료! 다음 단계로 진행
+                if (animationPhase === 'camera') {
+                  handleCameraReady();
+                }
               }
             };
           }
         } catch (error) {
           console.error("Error setting up webcam or CocoSSD model:", error);
+          setWebcamError(true);
         }
       }
     }
@@ -514,7 +533,7 @@ const MainComponent = () => {
       }
       console.log("Cleanup complete.");
     };
-  }, [isClient, isAllCardsDroppedPopupVisible]);
+  }, [isClient, isAllCardsDroppedPopupVisible, animationPhase]);
 
   const detectFrameContents = async () => {
     if (!videoRef.current || videoRef.current.readyState < 2 || !cocoSsdModelRef.current || !canvasRef.current || !sectionRef.current) {
@@ -641,124 +660,119 @@ const MainComponent = () => {
     }
   };
 
-  // 팝업 표시 및 내용 생성을 위한 통합 useEffect
+  // 1. 팝업 트리거 및 초기 콘텐츠 설정
   useEffect(() => {
     const allCardsAreDropped = cards.length > 0 && droppedCardIds.size === cards.length;
 
     if (allCardsAreDropped || nextButtonClicked) {
-      if (!isAllCardsDroppedPopupVisible) { // 팝업이 아직 안보일 때만 내용 재생성
+      if (!isAllCardsDroppedPopupVisible) { 
         const sortedCards = [...cards].sort((a, b) => a.position.x - b.position.x);
         const sortedNames = sortedCards.map(card => 
           card.image.split('/').pop().split('.').slice(0, -1).join('.')
         );
-        const allImages = cards.map(card => card.image);
-        const randomImageSrc = allImages[Math.floor(Math.random() * allImages.length)];
         
-        // --- Canvas를 이용한 랜덤 사각형 위치 생성 로직 ---
-        const img = new window.Image();
-        img.crossOrigin = "Anonymous"; // 로컬 이미지이므로 필수적이지는 않으나 좋은 습관입니다.
-        img.src = randomImageSrc;
-
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const imageSize = 300;
-          const squareSize = 20;
-          canvas.width = imageSize;
-          canvas.height = imageSize;
-
-          const ctx = canvas.getContext('2d', { willReadFrequently: true });
-          ctx.drawImage(img, 0, 0, imageSize, imageSize);
-          
-          let imageData;
-          try {
-            imageData = ctx.getImageData(0, 0, imageSize, imageSize).data;
-          } catch (e) {
-            console.error("Error getting image data:", e);
-            const fallbackSquares = Array.from({ length: 4 }, () => ({
-              top: `${Math.random() * (imageSize - squareSize)}px`,
-              left: `${Math.random() * (imageSize - squareSize)}px`,
-            }));
-            setRandomSquares(fallbackSquares);
-            setCroppedImageUrls([]);
-            setPopupImage(randomImageSrc);
-            setSortedDroppedCardNames(sortedNames);
-            setIsAllCardsDroppedPopupVisible(true);
-            return;
-          }
-
-          const squares = [];
-          let attempts = 0;
-          const maxAttempts = 5000;
-
-          while (squares.length < 4 && attempts < maxAttempts) {
-            const x = Math.floor(Math.random() * (imageSize - squareSize));
-            const y = Math.floor(Math.random() * (imageSize - squareSize));
-            
-            let totalAlpha = 0;
-            for (let i = 0; i < squareSize; i++) {
-              for (let j = 0; j < squareSize; j++) {
-                const alphaIndex = ((y + j) * imageSize + (x + i)) * 4 + 3;
-                totalAlpha += imageData[alphaIndex];
-              }
-            }
-            const avgAlpha = totalAlpha / (squareSize * squareSize);
-
-            if (avgAlpha > 10) {
-              squares.push({ top: `${y}px`, left: `${x}px` });
-            }
-            attempts++;
-          }
-          
-          while (squares.length < 4) {
-            squares.push({
-              top: `${Math.random() * (imageSize - squareSize)}px`,
-              left: `${Math.random() * (imageSize - squareSize)}px`,
-            });
-          }
-
-          // --- 이미지 크롭 로직 ---
-          const urls = [];
-          const cropCanvas = document.createElement('canvas');
-          cropCanvas.width = 100;
-          cropCanvas.height = 100;
-          const cropCtx = cropCanvas.getContext('2d');
-
-          for (const square of squares) {
-            cropCtx.clearRect(0, 0, 100, 100);
-            const sx = parseInt(square.left, 10);
-            const sy = parseInt(square.top, 10);
-            cropCtx.drawImage(img, sx, sy, 20, 20, 0, 0, 100, 100);
-            urls.push(cropCanvas.toDataURL());
-          }
-
-          // 모든 상태를 한 번에 업데이트하여 렌더링을 동기화
-          setCroppedImageUrls(urls);
-          setRandomSquares(squares);
-          setPopupImage(randomImageSrc);
-          setSortedDroppedCardNames(sortedNames);
-          setIsAllCardsDroppedPopupVisible(true);
-        };
-
-        img.onerror = () => {
-          console.error("Failed to load image for canvas processing.");
-           const fallbackSquares = Array.from({ length: 4 }, () => ({
-              top: `${Math.random() * (300 - 20)}px`,
-              left: `${Math.random() * (300 - 20)}px`,
-            }));
-          setRandomSquares(fallbackSquares);
-          setCroppedImageUrls([]);
-          setPopupImage(randomImageSrc);
-          setSortedDroppedCardNames(sortedNames);
-          setIsAllCardsDroppedPopupVisible(true);
-        }
+        const allImages = cards.map(card => card.image);
+        const shuffled = allImages.sort(() => 0.5 - Math.random());
+        setPopupImages(shuffled.slice(0, 3));
+        
+        setCurrentPopupImageIndex(0);
+        setSortedDroppedCardNames(sortedNames);
+        setIsAllCardsDroppedPopupVisible(true);
       }
     } else {
       if (isAllCardsDroppedPopupVisible) {
         setIsAllCardsDroppedPopupVisible(false);
-        setLineCoordinates([]); // 팝업이 닫힐 때 선 좌표 초기화
+        setLineCoordinates([]);
       }
     }
   }, [cards, droppedCardIds, nextButtonClicked, isAllCardsDroppedPopupVisible]);
+
+  // 2. 현재 이미지에 대한 캔버스 로직 (사각형 위치, 크롭 이미지 생성)
+  useEffect(() => {
+    if (!isAllCardsDroppedPopupVisible || popupImages.length === 0) return;
+
+    const randomImageSrc = popupImages[currentPopupImageIndex];
+    if (!randomImageSrc) return;
+
+    const img = new window.Image();
+    img.crossOrigin = "Anonymous";
+    img.src = randomImageSrc;
+
+    img.onload = () => {
+      const analysisCanvas = document.createElement('canvas');
+      const imageSize = 300;
+      const squareSize = 20;
+      analysisCanvas.width = imageSize;
+      analysisCanvas.height = imageSize;
+      const ctx = analysisCanvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, imageSize, imageSize);
+      
+      let imageData;
+      try {
+        imageData = ctx.getImageData(0, 0, imageSize, imageSize).data;
+      } catch (e) {
+        console.error("Error getting image data:", e);
+        setRandomSquares([]);
+        setCroppedImageUrls([]);
+        return;
+      }
+
+      const validCenterPoints = [];
+      const margin = 10;
+      for (let y = margin; y < imageSize - margin; y++) {
+        for (let x = margin; x < imageSize - margin; x++) {
+          const alphaIndex = (y * imageSize + x) * 4 + 3;
+          if (imageData[alphaIndex] > 50) {
+            validCenterPoints.push({ x, y });
+          }
+        }
+      }
+      
+      const squares = [];
+      if (validCenterPoints.length > 0) {
+        for (let i = validCenterPoints.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [validCenterPoints[i], validCenterPoints[j]] = [validCenterPoints[j], validCenterPoints[i]];
+        }
+        const pointsToTake = Math.min(4, validCenterPoints.length);
+        for (let i = 0; i < pointsToTake; i++) {
+          const center = validCenterPoints[i];
+          squares.push({
+            top: `${center.y - margin}px`,
+            left: `${center.x - margin}px`,
+          });
+        }
+      }
+      while (squares.length < 4) {
+        squares.push({
+          top: `${Math.random() * (imageSize - squareSize)}px`,
+          left: `${Math.random() * (imageSize - squareSize)}px`,
+        });
+      }
+
+      const urls = [];
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = 100;
+      cropCanvas.height = 100;
+      const cropCtx = cropCanvas.getContext('2d');
+      for (const square of squares) {
+        cropCtx.clearRect(0, 0, 100, 100);
+        const sx = parseInt(square.left, 10);
+        const sy = parseInt(square.top, 10);
+        cropCtx.drawImage(analysisCanvas, sx, sy, 20, 20, 0, 0, 100, 100);
+        urls.push(cropCanvas.toDataURL());
+      }
+      
+      setRandomSquares(squares);
+      setCroppedImageUrls(urls);
+    };
+
+    img.onerror = () => {
+      console.error("Failed to load image for canvas processing:", randomImageSrc);
+      setRandomSquares([]);
+      setCroppedImageUrls([]);
+    }
+  }, [isAllCardsDroppedPopupVisible, popupImages, currentPopupImageIndex]);
 
   // 선 좌표를 계산하는 useEffect
   useEffect(() => {
@@ -858,18 +872,22 @@ const MainComponent = () => {
     }
   }, [isAllCardsDroppedPopupVisible, randomSquares, croppedImageUrls]);
 
-  // 팝업이 보이면 3초 후 페이지를 이동시키는 useEffect
+  // 3. 이미지 순환 및 페이지 이동 타이머
   useEffect(() => {
-    let timer;
-    if (isAllCardsDroppedPopupVisible) {
-      timer = setTimeout(() => {
+    if (!isAllCardsDroppedPopupVisible || popupImages.length === 0) return;
+
+    const timer = setTimeout(() => {
+      if (currentPopupImageIndex < popupImages.length - 1) {
+        setCurrentPopupImageIndex(prevIndex => prevIndex + 1);
+      } else {
         router.push('/more');
-      }, 3000);
-    }
+      }
+    }, 2500); // 4초 -> 2.5초로 변경
+
     return () => {
-      clearTimeout(timer); // 컴포넌트 언마운트 또는 팝업이 닫힐 때 타이머 정리
+      clearTimeout(timer);
     };
-  }, [isAllCardsDroppedPopupVisible, router]);
+  }, [isAllCardsDroppedPopupVisible, currentPopupImageIndex, popupImages, router]);
 
   // useEffect to update lastFixedCardInfo when a card is dropped or auto-fixed
   useEffect(() => {
@@ -959,17 +977,90 @@ const MainComponent = () => {
     prevDroppedCardIdsRef.current = new Set(currentDroppedIds);
   }, [droppedCardIds, cards, lastFixedCardInfo]); // dependencies: droppedCardIds to trigger, cards for data, lastFixedCardInfo for comparison in set.
 
+  const currentImage = popupImages.length > 0 ? popupImages[currentPopupImageIndex] : '';
+  const currentWord = currentImage 
+    ? currentImage.split('/').pop().split('.').slice(0, -1).join('.')
+    : '';
+
+  // 카메라 준비 완료 시 호출될 콜백
+  const handleCameraReady = () => {
+    setAnimationPhase('header');
+  };
+
+  // 카드 시퀀스 완료 시 호출될 콜백
+  const handleCardsComplete = () => {
+    setAnimationPhase('complete');
+  };
+
+  // header -> cards 자동 전환 로직
+  useEffect(() => {
+    if (animationPhase === 'header') {
+      const timer = setTimeout(() => {
+        setAnimationPhase('cards');
+      }, 1500); // 1.5초 후 카드 등장
+      return () => clearTimeout(timer);
+    }
+  }, [animationPhase]);
+
   return (
     <Container className={spaceMono.className} ref={containerRef}>
+      {/* 1. 그리드 애니메이션: 항상 렌더링 */}
+      <GridReveal
+        rows={6}
+        cols={16}
+        lineColor="#fff"
+        bgColor="#111"
+        lineWidth={0.3}
+        animationDuration={1800}
+        onComplete={() => {
+          // 한 번만 실행되도록 보장
+          if (animationPhase === 'grid') {
+            setAnimationPhase('camera');
+          }
+        }}
+      />
+
+      {/* 2. 카메라 화면: 그리드 이후 단계에서 항상 보이게 */}
+      {animationPhase !== 'grid' && (
+        <WebcamContainer>
+          {webcamError ? (
+            <div>no cam</div>
+          ) : (
+            <>
+              <video ref={videoRef} autoPlay playsInline muted />
+              <canvas ref={canvasRef} />
+            </>
+          )}
+        </WebcamContainer>
+      )}
+
+      {/* 3. 헤더 텍스트: 항상 공간을 차지하고, header 단계부터 fade-in */}
+      <Header style={{
+        opacity: ['header', 'cards', 'complete'].includes(animationPhase) ? 1 : 0,
+        visibility: ['header', 'cards', 'complete'].includes(animationPhase) ? 'visible' : 'hidden',
+        transition: 'opacity 0.8s ease-in-out'
+      }}>
+        <Title>Artifacts of Tomorrow</Title>
+        <Subtitle>Welcome. This is a unique space where we view our present day through the perspective of the future. How might curators from 2190 interpret our ordinary objects like smartphones, headphones, and books?
+        Move the time slider to change the year, select an exhibit, and present a curator card to experience how today's objects transform and are reinterpreted from various perspectives.</Subtitle>
+      </Header>
+
+      {/* 4. 프로젝트 카드 순차 등장 */}
+      {animationPhase === 'cards' && (
+        <CardSequence
+          isVisible={true}
+          cards={cards}
+          onComplete={handleCardsComplete}
+        />
+      )}
+
       {isClient && !isAllCardsDroppedPopupVisible && (
         <>
-          <WebcamContainer>
-            <video ref={videoRef} autoPlay playsInline muted />
-            <canvas ref={canvasRef} />
-          </WebcamContainer>
-          <WebcamLabel>
-            <div>object: {detectedObjectName || '...'}</div>
-          </WebcamLabel>
+          {!webcamError && (
+            <WebcamLabel>
+              <div>object: {detectedObjectName || '...'}</div>
+            </WebcamLabel>
+          )}
         </>
       )}
 
@@ -1001,12 +1092,6 @@ const MainComponent = () => {
           look at that
         </TextCursor>
       )}
-
-      <Header>
-        <Title>Artifacts of Tomorrow</Title>
-        <Subtitle>Welcome. This is a unique space where we view our present day through the perspective of the future. How might curators from 2190 interpret our ordinary objects like smartphones, headphones, and books?
-        Move the time slider to change the year, select an exhibit, and present a curator card to experience how today's objects transform and are reinterpreted from various perspectives.</Subtitle>
-      </Header>
 
       <Section 
         ref={sectionRef}
@@ -1043,7 +1128,7 @@ const MainComponent = () => {
                 key={project.id}
                 onMouseDown={(e) => {
                   e.preventDefault(); // Specifically prevent default on card mousedown
-                  handleMouseDown(e, project.id); // Pass original event and id
+                  handleMouseDown(e, project.id); // Pass project.id, not the whole project object
                 }}
                 // onMouseUp is handled by the global handleMouseUp now for drag release
                 style={{
@@ -1109,7 +1194,7 @@ const MainComponent = () => {
       {isAllCardsDroppedPopupVisible && (
         <AllCardsDroppedPopupOverlay>
           <AllCardsDroppedPopupContent>
-            {popupImage && (
+            {popupImages.length > 0 && (
               <div className="main-content-wrapper" ref={mainContentRef}>
                 {/* Left Grid */}
                 <div className="grid-container">
@@ -1123,7 +1208,7 @@ const MainComponent = () => {
                 {/* Center Image */}
                 <div className="popup-image-wrapper">
                   <Image 
-                    src={popupImage} 
+                    src={popupImages[currentPopupImageIndex]} 
                     alt="Randomly selected artifact" 
                     width={300} 
                     height={300}
@@ -1167,7 +1252,10 @@ const MainComponent = () => {
             )}
             <div className="words-container">
               {sortedDroppedCardNames.map((word, index) => (
-                <span key={index} className="word-item">
+                <span 
+                  key={index}
+                  className={`word-item ${word === currentWord ? 'highlight' : ''}`}
+                >
                   {word}
                 </span>
               ))}

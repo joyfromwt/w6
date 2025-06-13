@@ -17,13 +17,8 @@ export const Container = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  background-color: #000;
   color: #A8A8A8;
   position: relative;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
-  background-size: 150px 150px;
 `;
 
 export const Header = styled.header`
@@ -31,6 +26,8 @@ export const Header = styled.header`
   text-align: center;
   max-width: 1400px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 `;
 
 export const Title = styled.h1`
@@ -177,10 +174,18 @@ export const WebcamContainer = styled.div`
   width: 300px;
   height: 150px; /* 웹캠 높이를 150px으로 변경 */
   background-color: #000;
-  border: 1px solid #A8A8A8;
+  border: 0.5px solid #FFF;
   z-index: 10000; /* 다른 요소들 위에 표시 */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   overflow: hidden; /* 비디오가 컨테이너를 넘어갈 경우 숨김 */
+
+  /* 텍스트 중앙 정렬을 위한 스타일 추가 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFF;
+  font-family: 'G2ErikaMono-Medium', monospace;
+  font-size: 1rem;
 
   video {
     width: 100%;
@@ -328,11 +333,16 @@ export const AllCardsDroppedPopupContent = styled.div`
     flex-wrap: wrap;
     gap: 0.5em 1em;
     justify-content: center;
-    color: #FFD700;
   }
 
   .word-item {
     font-size: 1.2rem;
+    color: #FFF;
+    transition: color 0.3s ease-in-out;
+  }
+
+  .word-item.highlight {
+    color: #FFD700;
   }
 `;
 
