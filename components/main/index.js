@@ -1002,6 +1002,16 @@ const MainComponent = () => {
     }
   }, [animationPhase]);
 
+  const handleMoreClick = () => {
+    if (selectedProject) {
+      // 프로젝트 제목과 관련 키워드를 배열로 만듭니다.
+      const words = [selectedProject.title, '유물', '21세기'];
+      // encodeURIComponent를 사용하여 각 단어를 인코딩하고 쉼표로 연결합니다.
+      const queryString = words.map(word => encodeURIComponent(word)).join(',');
+      router.push(`/more?words=${queryString}`);
+    }
+  };
+
   return (
     <Container className={spaceMono.className} ref={containerRef}>
       {/* 1. 그리드 애니메이션: 항상 렌더링 */}
@@ -1162,32 +1172,9 @@ const MainComponent = () => {
 
       <ProjectPopup
         open={!!selectedProject}
+        onClose={() => setSelectedProject(null)}
+        onMore={handleMoreClick}
         project={selectedProject}
-        onClose={() => {
-            setSelectedProject(null);
-            const newStates = { ...detectionStates };
-            let popupReset = false;
-            if (selectedProject) {
-              Object.keys(newStates).forEach(className => {
-                const cardImage = cardsRef.current.find(card => card.id === selectedProject.id)?.image;
-                if (cardImage === newStates[className].imagePath) {
-                  if(newStates[className].popupShown) {
-                    newStates[className] = { ...newStates[className], popupShown: false, startTime: null };
-                    popupReset = true;
-                  }
-                }
-              });
-            }
-            if(popupReset) {
-              setDetectionStates(newStates);
-            }
-        }}
-        onMore={() => {
-          if (selectedProject) {
-            router.push(`/project/${selectedProject.id}`);
-            setSelectedProject(null);
-          }
-        }}
       />
 
       {/* All Cards Dropped Popup */}
