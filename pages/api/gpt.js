@@ -1,7 +1,10 @@
 import OpenAI from 'openai';
 
+const apiKey = process.env.OPENAI_API_KEY;
+console.log(`[/api/gpt] Initializing... API Key loaded: ${!!apiKey}`);
+
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: apiKey,
 });
 
 export default async function handler(req, res) {
@@ -30,7 +33,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4.1",
+      model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 250,
       temperature: 0.7,
