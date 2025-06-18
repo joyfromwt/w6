@@ -13,6 +13,7 @@ import {
   RulerContainer,
   RulerTick,
   RulerLabel,
+  WebcamWrapper,
   WebcamContainer,
   WebcamLabel,
   NextButton,
@@ -27,6 +28,7 @@ import * as cocoSsd from '@tensorflow-models/coco-ssd';
 import useAnimationSequence from '../../hooks/useAnimationSequence';
 import GridReveal from './animation/GridReveal';
 import CardSequence from './animation/CardSequence';
+import Typewriter from './animation/Typewriter';
 
 const spaceMono = Space_Mono({
   weight: ["400", "700"],
@@ -38,6 +40,8 @@ const CARD_HEIGHT_PX = 200;
 const FIST_RESET_COOLDOWN_MS = 3000;
 const DRAG_SCALE = 1.1;
 const CARD_PLACEMENT_GAP_PERCENT = 2; // Gap between auto-placed cards
+
+const SUBTITLE_TEXT = `Welcome. This is a unique space where we view our present day through the perspective of the future. How might curators from 2190 interpret our ordinary objects like smartphones, headphones, and books? Move the time slider to change the year, select an exhibit, and present a curator card to experience how today's objects transform and are reinterpreted from various perspectives.`;
 
 const MainComponent = () => {
   const containerRef = useRef(null);
@@ -53,7 +57,6 @@ const MainComponent = () => {
   const [draggingCard, setDraggingCard] = useState(null);
   const sectionRef = useRef(null);
   const [customCursorPosition, setCustomCursorPosition] = useState({ x: 0, y: 0 });
-  const [isTextCursorVisible, setIsTextCursorVisible] = useState(false);
   const hoveredCardIdRef = useRef(null);
 
   const router = useRouter();
@@ -438,29 +441,9 @@ const MainComponent = () => {
   }, [cards.length, setCards]); // MODIFIED dependencies: removed draggingCard, droppedCardIds. `setCards` is stable.
                                 // `draggingCard` and `droppedCardIds` will be read directly from state inside `animate`.
 
-  const handleSectionMouseEnter = () => {
-    setIsTextCursorVisible(true);
-  };
-  const handleSectionMouseLeave = () => {
-    hoveredCardIdRef.current = null;
-    setIsTextCursorVisible(false);
-  };
-
   const handleCardMouseDown = (e, project) => {
     setMouseDownPos({ x: e.clientX, y: e.clientY });
     handleMouseDown(e, project.id);
-  };
-
-  const handleCardMouseUp = (e, project) => {
-    const clickThreshold = 5;
-    const isSimpleClick =
-      mouseDownPos &&
-      Math.abs(e.clientX - mouseDownPos.x) < clickThreshold &&
-      Math.abs(e.clientY - mouseDownPos.y) < clickThreshold;
-
-    if (isSimpleClick) {
-      setSelectedProject(project);
-    }
     setMouseDownPos(null); 
   };
 
@@ -566,6 +549,20 @@ const MainComponent = () => {
 
     for (let i = 0; i < predictions.length; i++) {
       const obj = predictions[i];
+      
+      // Draw the bounding box and label
+      context.beginPath();
+      context.rect(obj.bbox[0], obj.bbox[1], obj.bbox[2], obj.bbox[3]);
+      context.lineWidth = 1;
+      context.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+      context.stroke();
+      context.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      context.fillText(
+        `${obj.class} (${Math.round(obj.score * 100)}%)`,
+        obj.bbox[0],
+        obj.bbox[1] > 10 ? obj.bbox[1] - 5 : 10
+      );
+
       if (detectionStates[obj.class] && obj.score > 0.6) {
         objectDetectedThisFrame = obj.class;
         
@@ -662,21 +659,34 @@ const MainComponent = () => {
 
   // 1. 팝업 트리거 및 초기 콘텐츠 설정
   useEffect(() => {
-    const allCardsAreDropped = cards.length > 0 && droppedCardIds.size === cards.length;
+    const shouldTriggerPopup = (cards.length > 0 && droppedCardIds.size >= 1) || nextButtonClicked;
 
-    if (allCardsAreDropped || nextButtonClicked) {
-      if (!isAllCardsDroppedPopupVisible) { 
-        const sortedCards = [...cards].sort((a, b) => a.position.x - b.position.x);
-        const sortedNames = sortedCards.map(card => 
-          card.image.split('/').pop().split('.').slice(0, -1).join('.')
-        );
-        
-        const allImages = cards.map(card => card.image);
-        const shuffled = allImages.sort(() => 0.5 - Math.random());
-        setPopupImages(shuffled.slice(0, 3));
-        
+    if (shouldTriggerPopup) {
+      if (!isAllCardsDroppedPopupVisible) {
+        let imagesForPopup = [];
+        let namesForPopup = [];
+
+        if (droppedCardIds.size === 1 && !nextButtonClicked) {
+          // 시나리오 1: 카드 1개만 내려놓은 경우
+          const droppedId = [...droppedCardIds][0];
+          const droppedCard = cards.find(card => card.id === droppedId);
+          if (droppedCard) {
+            imagesForPopup = [droppedCard.image];
+            namesForPopup = [droppedCard.title];
+          }
+        } else {
+          // 시나리오 2: 여러 카드 또는 Next 버튼 클릭
+          const sortedCards = [...cards].sort((a, b) => a.position.x - b.position.x);
+          namesForPopup = sortedCards.map(card => card.title);
+
+          const allImages = cards.map(card => card.image);
+          const shuffled = allImages.sort(() => 0.5 - Math.random());
+          imagesForPopup = shuffled.slice(0, 3);
+        }
+
+        setPopupImages(imagesForPopup);
         setCurrentPopupImageIndex(0);
-        setSortedDroppedCardNames(sortedNames);
+        setSortedDroppedCardNames(namesForPopup);
         setIsAllCardsDroppedPopupVisible(true);
       }
     } else {
@@ -880,14 +890,20 @@ const MainComponent = () => {
       if (currentPopupImageIndex < popupImages.length - 1) {
         setCurrentPopupImageIndex(prevIndex => prevIndex + 1);
       } else {
-        router.push('/more');
+        // /more 페이지로 이동
+        const words = sortedDroppedCardNames.length > 0
+          ? [...sortedDroppedCardNames, '유물', '21세기']
+          : ['유물', '21세기']; // 비상시 기본값
+
+        const queryString = words.map(word => encodeURIComponent(word)).join(',');
+        router.push(`/more?words=${queryString}`);
       }
-    }, 2500); // 4초 -> 2.5초로 변경
+    }, 2500);
 
     return () => {
       clearTimeout(timer);
     };
-  }, [isAllCardsDroppedPopupVisible, currentPopupImageIndex, popupImages, router]);
+  }, [isAllCardsDroppedPopupVisible, currentPopupImageIndex, popupImages, router, sortedDroppedCardNames]);
 
   // useEffect to update lastFixedCardInfo when a card is dropped or auto-fixed
   useEffect(() => {
@@ -1030,18 +1046,26 @@ const MainComponent = () => {
         }}
       />
 
-      {/* 2. 카메라 화면: 그리드 이후 단계에서 항상 보이게 */}
-      {animationPhase !== 'grid' && (
-        <WebcamContainer>
-          {webcamError ? (
-            <div>no cam</div>
-          ) : (
-            <>
-              <video ref={videoRef} autoPlay playsInline muted />
-              <canvas ref={canvasRef} />
-            </>
+      {/* 2. 카메라 & 라벨 그룹: 그리드 이후 단계에서, 그리고 팝업이 보이지 않을 때만 보이게 */}
+      {animationPhase !== 'grid' && !isAllCardsDroppedPopupVisible && (
+        <WebcamWrapper>
+          <WebcamContainer>
+            {webcamError ? (
+              <div>no cam</div>
+            ) : (
+              <>
+                <video ref={videoRef} autoPlay playsInline muted />
+                <canvas ref={canvasRef} />
+              </>
+            )}
+          </WebcamContainer>
+          {isClient && !webcamError && (
+            <WebcamLabel>
+              <div>user detected</div>
+              <div>object: {detectedObjectName || '...'}</div>
+            </WebcamLabel>
           )}
-        </WebcamContainer>
+        </WebcamWrapper>
       )}
 
       {/* 3. 헤더 텍스트: 항상 공간을 차지하고, header 단계부터 fade-in */}
@@ -1051,8 +1075,13 @@ const MainComponent = () => {
         transition: 'opacity 0.8s ease-in-out'
       }}>
         <Title>Artifacts of Tomorrow</Title>
-        <Subtitle>Welcome. This is a unique space where we view our present day through the perspective of the future. How might curators from 2190 interpret our ordinary objects like smartphones, headphones, and books?
-        Move the time slider to change the year, select an exhibit, and present a curator card to experience how today's objects transform and are reinterpreted from various perspectives.</Subtitle>
+        <Subtitle>
+          <Typewriter 
+            text={SUBTITLE_TEXT}
+            typingSpeed={30}
+            sentencePause={500}
+          />
+        </Subtitle>
       </Header>
 
       {/* 4. 프로젝트 카드 순차 등장 */}
@@ -1062,16 +1091,6 @@ const MainComponent = () => {
           cards={cards}
           onComplete={handleCardsComplete}
         />
-      )}
-
-      {isClient && !isAllCardsDroppedPopupVisible && (
-        <>
-          {!webcamError && (
-            <WebcamLabel>
-              <div>object: {detectedObjectName || '...'}</div>
-            </WebcamLabel>
-          )}
-        </>
       )}
 
       <RulerContainer side="left">
@@ -1091,7 +1110,7 @@ const MainComponent = () => {
         ))}
       </RulerContainer>
 
-      {isTextCursorVisible && (
+      {isClient && (
         <TextCursor 
           fontFamily={spaceMono.style.fontFamily}
           style={{
@@ -1105,8 +1124,6 @@ const MainComponent = () => {
 
       <Section 
         ref={sectionRef}
-        onMouseEnter={handleSectionMouseEnter}
-        onMouseLeave={handleSectionMouseLeave}
         onMouseMove={handleGlobalMouseMove}
       >
         {cards.map((project) => {

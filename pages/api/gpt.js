@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
 
 const apiKey = process.env.OPENAI_API_KEY;
+// WARNING: For debugging only. This will expose your API key in the server logs.
+console.log(`[/api/gpt] Full API Key being used: ${apiKey}`);
 console.log(`[/api/gpt] Initializing... API Key loaded: ${!!apiKey}`);
 
 const openai = new OpenAI({

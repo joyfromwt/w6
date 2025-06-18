@@ -36,7 +36,7 @@ export const Title = styled.h1`
   color: #A8A8A8;
   margin-top: 105px;
   margin-bottom: 0.5rem;
-  margin-left: 100px;
+  margin-left: 120px;
   margin-right: 0;
   text-shadow: 0 0 0px rgba(168, 168, 168, 0.2);
   letter-spacing: 0px;
@@ -51,12 +51,13 @@ export const Subtitle = styled.p`
   font-family: 'G2ErikaMono-Medium';
   font-size: 0.9rem;
   color: #A8A8A8;
-  margin: 0.5rem 0 0 100px;
+  margin: 0.5rem 0 0 120px;
   letter-spacing: 0.5px;
   opacity: 0.8;
   max-width: 600px;
   width: 100%;
   text-align: left;
+  min-height: 100px;
 `;
 
 export const Section = styled.section`
@@ -167,17 +168,23 @@ export const RulerLabel = styled.span`
   }
 `;
 
+export const WebcamWrapper = styled.div`
+  position: fixed;
+  top: 177px;
+  right: 115px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+`;
+
 export const WebcamContainer = styled.div`
-  position: fixed; /* 화면 기준으로 위치 고정 */
-  top: 150px; /* 상단에서 20px 간격 */
-  right: 162px; /* 기존 142px에서 +20px 하여 왼쪽으로 20px 이동 */
-  width: 300px;
-  height: 150px; /* 웹캠 높이를 150px으로 변경 */
+  width: 350px;
+  height: 175px;
   background-color: #000;
   border: 0.5px solid #FFF;
-  z-index: 10000; /* 다른 요소들 위에 표시 */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   overflow: hidden; /* 비디오가 컨테이너를 넘어갈 경우 숨김 */
+  position: relative; /* For canvas positioning */
 
   /* 텍스트 중앙 정렬을 위한 스타일 추가 */
   display: flex;
@@ -204,15 +211,12 @@ export const WebcamContainer = styled.div`
 `;
 
 export const WebcamLabel = styled.div`
-  position: fixed; 
-  top: calc(150px + 150px + 5px); /* WebcamContainer 아래에 위치 (top + height + margin) */
-  right: 162px; /* WebcamContainer와 동일하게 162px로 변경 */
   width: 300px; /* WebcamContainer와 동일한 width 값 */
+  padding-top: 5px; /* 상단 컨테이너와의 간격 */
   padding-left: 5px; /* 좌측 여백 약간 추가 */
   color: #A8A8A8;
   font-size: 0.8rem;
   text-align: left; /* 텍스트를 왼쪽으로 정렬 */
-  z-index: 10001; 
   pointer-events: none; 
   font-family: 'G2ErikaMono-Medium';
   div {
@@ -223,7 +227,7 @@ export const WebcamLabel = styled.div`
 export const NextButton = styled.button`
   position: fixed;
   bottom: 20px;
-  right: 20px;
+  right: 115px;
   background-color: #000;
   color: white;
   border: 1px solid #FFF;
@@ -336,7 +340,7 @@ export const AllCardsDroppedPopupContent = styled.div`
   }
 
   .word-item {
-    font-size: 1.2rem;
+    font-size: 0.9rem;
     color: #FFF;
     transition: color 0.3s ease-in-out;
   }

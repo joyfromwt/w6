@@ -186,7 +186,7 @@ const MorePage = () => {
 
         return `여러분, 보시는 이 '${firstWord}'은(는) 21세기 초, 인류가 디지털과 현실의 경계를 허물기 시작했던 격동기의 상징물입니다. 당시 사람들은 '${keywords}' 같은 일상적 사물에 특별한 의미를 부여하며, 자신들의 정체성을 표현하려 했습니다. 이 작은 유물 하나에 그들의 희망과 불안, 그리고 미래에 대한 상상이 모두 담겨 있는 셈이죠.`;
     }, [words]);
-
+  
     useEffect(() => {
         if (router.isReady) {
             console.log('[MorePage] Router is ready. Query words:', words);
