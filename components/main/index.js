@@ -60,7 +60,6 @@ const MainComponent = () => {
   const hoveredCardIdRef = useRef(null);
 
   const router = useRouter();
-  const [selectedProject, setSelectedProject] = useState(null);
   const [mouseDownPos, setMouseDownPos] = useState(null);
 
   const cursorPosRef = useRef({ x: 0, y: 0 });
@@ -441,16 +440,6 @@ const MainComponent = () => {
   }, [cards.length, setCards]); // MODIFIED dependencies: removed draggingCard, droppedCardIds. `setCards` is stable.
                                 // `draggingCard` and `droppedCardIds` will be read directly from state inside `animate`.
 
-  const handleCardClick = (project) => {
-    // Navigate directly to the more page, skipping the popup.
-    const cardTitle = project.title.replace(/[()]/g, '');
-    const imageName = project.image.replace('/','').replace('.png','');
-    const words = [cardTitle, imageName];
-    
-    const queryString = words.map(word => encodeURIComponent(word)).join(',');
-    router.push(`/more?words=${queryString}`);
-  };
-
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -716,10 +705,26 @@ const MainComponent = () => {
       const analysisCanvas = document.createElement('canvas');
       const imageSize = 300;
       const squareSize = 20;
+
+      const aspect = img.width / img.height;
+      let renderWidth, renderHeight, offsetX, offsetY;
+
+      if (aspect >= 1) { // 이미지가 가로로 길거나 정사각형일 경우
+        renderWidth = imageSize;
+        renderHeight = imageSize / aspect;
+        offsetX = 0;
+        offsetY = (imageSize - renderHeight) / 2;
+      } else { // 이미지가 세로로 길 경우
+        renderHeight = imageSize;
+        renderWidth = imageSize * aspect;
+        offsetY = 0;
+        offsetX = (imageSize - renderWidth) / 2;
+      }
+      
       analysisCanvas.width = imageSize;
       analysisCanvas.height = imageSize;
       const ctx = analysisCanvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(img, 0, 0, imageSize, imageSize);
+      ctx.drawImage(img, offsetX, offsetY, renderWidth, renderHeight);
       
       let imageData;
       try {
@@ -757,13 +762,7 @@ const MainComponent = () => {
           });
         }
       }
-      while (squares.length < 4) {
-        squares.push({
-          top: `${Math.random() * (imageSize - squareSize)}px`,
-          left: `${Math.random() * (imageSize - squareSize)}px`,
-        });
-      }
-
+      
       const urls = [];
       const cropCanvas = document.createElement('canvas');
       cropCanvas.width = 100;
@@ -790,7 +789,7 @@ const MainComponent = () => {
 
   // 선 좌표를 계산하는 useEffect
   useEffect(() => {
-    if (isAllCardsDroppedPopupVisible && mainContentRef.current && randomSquares.length === 4 && croppedImageUrls.length === 4) {
+    if (isAllCardsDroppedPopupVisible && mainContentRef.current && randomSquares.length > 0 && croppedImageUrls.length > 0) {
       const calculateLines = () => {
         const wrapperRect = mainContentRef.current.getBoundingClientRect();
         const leftGrid = mainContentRef.current.children[0];
@@ -813,7 +812,7 @@ const MainComponent = () => {
         const gridSize = 100;
 
         // 작은 사각형들과 큰 사각형(그리드 아이템)들을 1:1로 연결
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < randomSquares.length; i++) {
             const smallSquare = randomSquares[i];
             
             // 시작점(x1, y1): 작은 사각형의 중심
@@ -897,7 +896,8 @@ const MainComponent = () => {
         // 마지막 이미지 표시 후 /more 페이지로 이동
         const firstCardTitle = sortedDroppedCardNames.length > 0 ? sortedDroppedCardNames[0] : null;
         if (firstCardTitle) {
-          const cardData = cards.find(c => c.title === firstCardTitle);
+          // 'cards' 상태 대신 'cardsRef'를 사용하여 불필요한 재실행 방지
+          const cardData = cardsRef.current.find(c => c.title === firstCardTitle);
           if (cardData) {
             const cardTitle = cardData.title.replace(/[()]/g, '');
             const imageName = cardData.image.replace('/','').replace('.png','');
@@ -907,12 +907,13 @@ const MainComponent = () => {
           }
         }
       }
-    }, 2500); // 2.5초 딜레이
+    }, 3000);
 
     return () => {
       clearTimeout(timer);
     };
-  }, [isAllCardsDroppedPopupVisible, currentPopupImageIndex, popupImages, router, sortedDroppedCardNames, cards]);
+    // 의존성 배열에서 'cards'를 제거하여 애니메이션으로 인한 타이머 초기화 방지
+  }, [isAllCardsDroppedPopupVisible, currentPopupImageIndex, popupImages, router, sortedDroppedCardNames]);
 
   // useEffect to update lastFixedCardInfo when a card is dropped or auto-fixed
   useEffect(() => {
@@ -1170,10 +1171,8 @@ const MainComponent = () => {
                   handleMouseDown(e, project.id);
                 }}
                 onMouseUp={(e) => {
-                  const dist = mouseDownPos ? Math.sqrt(Math.pow(e.clientX - mouseDownPos.x, 2) + Math.pow(e.clientY - mouseDownPos.y, 2)) : 100;
-                  if (dist < 10) {
-                    handleCardClick(project);
-                  }
+                  // 클릭과 드래그를 구분하지 않고, 마우스를 떼면 항상 드롭으로 처리합니다.
+                  // 이전에 추가했던 클릭 판별 로직(handleCardClick)을 제거합니다.
                   handleMouseUp();
                 }}
                 style={{
@@ -1205,17 +1204,12 @@ const MainComponent = () => {
         })}
       </Section>
 
-      {/* The popup is no longer needed as we navigate directly */}
-      {/* <ProjectPopup
-        open={!!selectedProject}
-        onClose={() => setSelectedProject(null)}
-        onMore={handleMoreClick}
-        project={selectedProject}
-      /> */}
-
       {/* All Cards Dropped Popup */}
       {isAllCardsDroppedPopupVisible && (
-        <AllCardsDroppedPopupOverlay>
+        <AllCardsDroppedPopupOverlay 
+          onClick={() => setIsAllCardsDroppedPopupVisible(false)}
+          className={isAllCardsDroppedPopupVisible ? 'popup-visible' : ''}
+        >
           <AllCardsDroppedPopupContent>
             {popupImages.length > 0 && (
               <div className="main-content-wrapper" ref={mainContentRef}>
@@ -1228,14 +1222,12 @@ const MainComponent = () => {
                   ))}
                 </div>
 
-                {/* Center Image */}
+                {/* Center Image -> Now TextArt */}
                 <div className="popup-image-wrapper">
-                  <Image 
-                    src={popupImages[currentPopupImageIndex]} 
-                    alt="Randomly selected artifact" 
-                    width={300} 
-                    height={300}
-                    className="popup-image"
+                  <TextArt
+                    src={popupImages[currentPopupImageIndex]}
+                    baseSize={60} // 텍스트 아트 크기를 100에서 60으로 줄임
+                    fontSize="0.5rem"
                   />
                   {randomSquares.map((pos, index) => (
                     <div 
@@ -1256,7 +1248,7 @@ const MainComponent = () => {
                 </div>
                 
                 {/* SVG for drawing lines */}
-                {lineCoordinates.length === 4 && (
+                {lineCoordinates.length > 0 && (
                   <svg className="line-svg-overlay">
                     {lineCoordinates.map((line, index) => (
                       <line

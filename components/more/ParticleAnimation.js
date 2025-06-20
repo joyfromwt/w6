@@ -71,6 +71,7 @@ const ParticleAnimation = ({ modelFile, transitionValue }) => {
     const fragmentShader = `
       // 텍스처 아틀라스 유니폼
       uniform sampler2D atlasTexture;
+      uniform float opacity;
       // 버텍스 셰이더에서 전달받은 텍스처 인덱스
       varying float vTextureIndex;
 
@@ -85,7 +86,7 @@ const ParticleAnimation = ({ modelFile, transitionValue }) => {
         // 텍스트 주변의 투명한 배경은 그리지 않도록 폐기(discard)합니다.
         if (color.a < 0.1) discard;
         
-        gl_FragColor = color;
+        gl_FragColor = vec4(color.rgb, color.a * opacity);
       }
     `;
 
@@ -141,7 +142,10 @@ const ParticleAnimation = ({ modelFile, transitionValue }) => {
         }
         
         const particleMaterial = new THREE.ShaderMaterial({
-            uniforms: { atlasTexture: { value: createTextTextureAtlas() } },
+            uniforms: { 
+              atlasTexture: { value: createTextTextureAtlas() },
+              opacity: { value: 1.0 }
+            },
             vertexShader,
             fragmentShader,
             blending: THREE.AdditiveBlending,
@@ -161,10 +165,10 @@ const ParticleAnimation = ({ modelFile, transitionValue }) => {
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 17 / maxDim;
+        const scale = 15 / maxDim;
 
         wrapper.position.sub(center);
-        wrapper.position.y -= 1;
+        wrapper.position.y -= 3;
         wrapper.scale.setScalar(scale);
 
         // Add lights
@@ -225,7 +229,7 @@ const ParticleAnimation = ({ modelFile, transitionValue }) => {
     const solidModel = solidModelRef.current;
 
     if (particles && solidModel) {
-      particles.material.opacity = 1.0 - transitionValue;
+      particles.material.uniforms.opacity.value = 1.0 - transitionValue;
 
       solidModel.traverse((child) => {
         if (child.isMesh) {

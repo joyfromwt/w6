@@ -18,8 +18,8 @@ const PageContainer = styled.div`
   position: relative;
   font-family: 'G2ErikaMono-Medium', monospace;
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 1px, transparent 1px);
   background-size: 150px 150px;
 `;
 
@@ -50,7 +50,7 @@ const RightColumn = styled.div`
 `;
 
 const Title = styled.h1`
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 400;
   color: #A8A8A8;
   margin-top: 0;
@@ -474,7 +474,7 @@ const MorePage = () => {
         <RightColumn>
           <ContentWrapper>
             <h2 style={{
-              fontSize: '1.5rem',
+              fontSize: '1.2rem',
               fontWeight: 400,
               color: '#A8A8A8',
               marginTop: 0,

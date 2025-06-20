@@ -266,6 +266,22 @@ export const AllCardsDroppedPopupOverlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 2000; 
+
+  .word-item {
+    font-size: 0.8rem;
+    color: #A8A8A8;
+    margin: 0 10px;
+    opacity: 0.4;
+    transition: opacity 0.5s ease;
+
+    &.highlight {
+      color: #FFD700;
+    }
+  }
+
+  &.popup-visible .word-item {
+    opacity: 1;
+  }
 `;
 
 export const AllCardsDroppedPopupContent = styled.div`
