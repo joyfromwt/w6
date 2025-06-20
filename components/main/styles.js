@@ -170,7 +170,7 @@ export const RulerLabel = styled.span`
 
 export const WebcamWrapper = styled.div`
   position: fixed;
-  top: 177px;
+  top: 153px;
   right: 115px;
   z-index: 10000;
   display: flex;
@@ -210,14 +210,25 @@ export const WebcamContainer = styled.div`
   }
 `;
 
+export const WebcamLabelTop = styled.div`
+  width: 300px;
+  padding-bottom: 5px; /* 하단 컨테이너와의 간격 */
+  padding-left: 5px;
+  color: #A8A8A8;
+  font-size: 0.8rem;
+  text-align: left;
+  pointer-events: none;
+  font-family: 'G2ErikaMono-Medium';
+`;
+
 export const WebcamLabel = styled.div`
   width: 300px; /* WebcamContainer와 동일한 width 값 */
   padding-top: 5px; /* 상단 컨테이너와의 간격 */
   padding-left: 5px; /* 좌측 여백 약간 추가 */
   color: #A8A8A8;
   font-size: 0.8rem;
-  text-align: left; /* 텍스트를 왼쪽으로 정렬 */
-  pointer-events: none; 
+  text-align: left;
+  pointer-events: none;
   font-family: 'G2ErikaMono-Medium';
   div {
     margin-bottom: 0.2rem; /* 줄 간격 */
@@ -282,9 +293,12 @@ export const AllCardsDroppedPopupContent = styled.div`
   .popup-image-wrapper {
     position: relative;
     width: 300px;
-    height: 300px;
+    height: auto;
     background-color: transparent;
     border: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .line-svg-overlay {

@@ -441,10 +441,14 @@ const MainComponent = () => {
   }, [cards.length, setCards]); // MODIFIED dependencies: removed draggingCard, droppedCardIds. `setCards` is stable.
                                 // `draggingCard` and `droppedCardIds` will be read directly from state inside `animate`.
 
-  const handleCardMouseDown = (e, project) => {
-    setMouseDownPos({ x: e.clientX, y: e.clientY });
-    handleMouseDown(e, project.id);
-    setMouseDownPos(null); 
+  const handleCardClick = (project) => {
+    // Navigate directly to the more page, skipping the popup.
+    const cardTitle = project.title.replace(/[()]/g, '');
+    const imageName = project.image.replace('/','').replace('.png','');
+    const words = [cardTitle, imageName];
+    
+    const queryString = words.map(word => encodeURIComponent(word)).join(',');
+    router.push(`/more?words=${queryString}`);
   };
 
   useEffect(() => {
@@ -890,20 +894,25 @@ const MainComponent = () => {
       if (currentPopupImageIndex < popupImages.length - 1) {
         setCurrentPopupImageIndex(prevIndex => prevIndex + 1);
       } else {
-        // /more 페이지로 이동
-        const words = sortedDroppedCardNames.length > 0
-          ? [...sortedDroppedCardNames, '유물', '21세기']
-          : ['유물', '21세기']; // 비상시 기본값
-
-        const queryString = words.map(word => encodeURIComponent(word)).join(',');
-        router.push(`/more?words=${queryString}`);
+        // 마지막 이미지 표시 후 /more 페이지로 이동
+        const firstCardTitle = sortedDroppedCardNames.length > 0 ? sortedDroppedCardNames[0] : null;
+        if (firstCardTitle) {
+          const cardData = cards.find(c => c.title === firstCardTitle);
+          if (cardData) {
+            const cardTitle = cardData.title.replace(/[()]/g, '');
+            const imageName = cardData.image.replace('/','').replace('.png','');
+            const words = [cardTitle, imageName];
+            const queryString = words.map(word => encodeURIComponent(word)).join(',');
+            router.push(`/more?words=${queryString}`);
+          }
+        }
       }
-    }, 2500);
+    }, 2500); // 2.5초 딜레이
 
     return () => {
       clearTimeout(timer);
     };
-  }, [isAllCardsDroppedPopupVisible, currentPopupImageIndex, popupImages, router, sortedDroppedCardNames]);
+  }, [isAllCardsDroppedPopupVisible, currentPopupImageIndex, popupImages, router, sortedDroppedCardNames, cards]);
 
   // useEffect to update lastFixedCardInfo when a card is dropped or auto-fixed
   useEffect(() => {
@@ -1020,9 +1029,11 @@ const MainComponent = () => {
 
   const handleMoreClick = () => {
     if (selectedProject) {
-      // 프로젝트 제목과 관련 키워드를 배열로 만듭니다.
-      const words = [selectedProject.title, '유물', '21세기'];
-      // encodeURIComponent를 사용하여 각 단어를 인코딩하고 쉼표로 연결합니다.
+      // 프로젝트 제목과 이미지 이름을 사용하여 쿼리 생성
+      const cardTitle = selectedProject.title.replace(/[()]/g, '');
+      const imageName = selectedProject.image.replace('/','').replace('.png','');
+      const words = [cardTitle, imageName];
+      
       const queryString = words.map(word => encodeURIComponent(word)).join(',');
       router.push(`/more?words=${queryString}`);
     }
@@ -1154,10 +1165,17 @@ const MainComponent = () => {
               <ProjectCard 
                 key={project.id}
                 onMouseDown={(e) => {
-                  e.preventDefault(); // Specifically prevent default on card mousedown
-                  handleMouseDown(e, project.id); // Pass project.id, not the whole project object
+                  e.preventDefault();
+                  setMouseDownPos({ x: e.clientX, y: e.clientY });
+                  handleMouseDown(e, project.id);
                 }}
-                // onMouseUp is handled by the global handleMouseUp now for drag release
+                onMouseUp={(e) => {
+                  const dist = mouseDownPos ? Math.sqrt(Math.pow(e.clientX - mouseDownPos.x, 2) + Math.pow(e.clientY - mouseDownPos.y, 2)) : 100;
+                  if (dist < 10) {
+                    handleCardClick(project);
+                  }
+                  handleMouseUp();
+                }}
                 style={{
                   left: `${project.position.x}%`,
                   top: `${project.position.y}%`,
@@ -1187,12 +1205,13 @@ const MainComponent = () => {
         })}
       </Section>
 
-      <ProjectPopup
+      {/* The popup is no longer needed as we navigate directly */}
+      {/* <ProjectPopup
         open={!!selectedProject}
         onClose={() => setSelectedProject(null)}
         onMore={handleMoreClick}
         project={selectedProject}
-      />
+      /> */}
 
       {/* All Cards Dropped Popup */}
       {isAllCardsDroppedPopupVisible && (

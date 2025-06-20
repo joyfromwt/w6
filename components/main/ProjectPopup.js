@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import Image from 'next/image';
 
 const Overlay = styled.div`
   position: fixed;
@@ -159,19 +158,15 @@ function TextArt({ src }) {
 
 export default function ProjectPopup({ open, onClose, onMore, project }) {
   if (!open || !project) return null;
+
+  // 괄호를 제거한 제목
+  const titleWithoutBrackets = project.title.replace(/[()]/g, '');
+
   return (
     <Overlay>
       <Popup>
-        <h2>{project.title}</h2>
-        {project.image && (
-          <Image
-            src={project.image}
-            alt={project.title}
-            width={340}
-            height={340}
-            style={{ objectFit: 'cover', display: 'block', margin: '2rem auto 1rem auto' }}
-          />
-        )}
+        <h2>{titleWithoutBrackets}</h2>
+        {project.image && <TextArt src={project.image} />}
         <ButtonRow>
           <PopupButton onClick={onClose}>back</PopupButton>
           <PopupButton onClick={onMore}>more</PopupButton>

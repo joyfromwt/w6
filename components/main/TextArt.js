@@ -61,7 +61,7 @@ function getTextArtFromImage(imgSrc, callback, baseSize, fontSize) {
   };
 }
 
-const TextArt = React.memo(function TextArt({ src, hoverEffect = true, fontSize = '0.9rem', baseSize = 30, style, color }) {
+const TextArt = React.memo(function TextArt({ src, hoverEffect = true, fontSize = '0.9rem', baseSize = 30, style, color, opacity = 1 }) {
   const [lines, setLines] = useState([]);
   // const [hoverPos, setHoverPos] = useState(null); // 투명도 효과 제거로 hoverPos 불필요
   const preRef = useRef();
@@ -116,8 +116,9 @@ const TextArt = React.memo(function TextArt({ src, hoverEffect = true, fontSize 
     objectFit: 'contain',
     display: 'block',
     color: color || '#A8A8A8',
+    opacity: opacity,
     ...style,
-  }), [fontSize, style, color]);
+  }), [fontSize, style, color, opacity]);
 
   const renderLines = useMemo(() => (
     lines.map((line, rowIdx) => (

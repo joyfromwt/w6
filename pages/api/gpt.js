@@ -24,13 +24,13 @@ export default async function handler(req, res) {
   const firstWord = words[0];
   const keywords = words.slice(1).join(', ');
 
-  const prompt = `당신은 "미래의 유물"이라는 전시회의 큐레이터입니다.
-주요 전시품은 '${firstWord}'이고, 연관 키워드는 '${keywords}'입니다.
-이것들을 활용하여 시적이고 이해하기 쉬운 한국어 해설을 작성해주세요.
-마치 21세기의 유물을 미래의 관객에게 설명하는 듯한 톤을 유지해야 합니다.
-다음의 구조와 톤을 따라주세요: "여러분, 보시는 이 '${firstWord}'은(는) [21세기 초반의 시대적 의미에 대한 설명]. 당시 사람들은 '${keywords}' 같은 [그것을 어떻게 사용했는지에 대한 묘사]. [이 유물이 무엇을 상징하는지에 대한 결론 문장]."
-전체 텍스트는 한 문단의 한국어 문장이어야 합니다.
-마크다운이나 다른 서식을 사용하지 마세요.`;
+  const prompt = `You are a curator at an exhibition titled "Artifacts of the Future."
+The main exhibit is '${firstWord}', and the related keywords are '${keywords}'.
+Write a poetic and insightful curation note in English.
+Maintain a tone as if you are explaining an artifact from the 21st century to an audience in the future.
+Follow this structure and tone: "Ladies and gentlemen, what you see here, the '${firstWord}', is a symbolic relic from the early 21st century, a turbulent era when humanity began to blur the lines between the digital and the real. People of that time imbued everyday objects like '${keywords}' with special meaning, using them to express their identities. This small artifact encapsulates their hopes, anxieties, and their vision of the future."
+The entire text must be a single paragraph in English.
+Do not use markdown or other formatting.`;
   console.log('[/api/gpt] Generated Prompt:', prompt);
 
   try {
